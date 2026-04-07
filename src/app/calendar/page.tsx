@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import AppShell from "@/components/AppShell";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Organization, Post } from "@/lib/types";
 import { getOrgStyle } from "@/lib/org-colors";
 import {
@@ -29,8 +29,8 @@ export default function CalendarPage() {
     const monthEnd = endOfMonth(currentMonth);
 
     const [orgsRes, postsRes] = await Promise.all([
-      supabase.from("organizations").select("*"),
-      supabase
+      getSupabase().from("organizations").select("*"),
+      getSupabase()
         .from("posts")
         .select("*")
         .in("status", ["scheduled", "approved", "published"])

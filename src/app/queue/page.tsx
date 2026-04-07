@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import AppShell from "@/components/AppShell";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Organization, Post } from "@/lib/types";
 import { getOrgStyle } from "@/lib/org-colors";
 
@@ -15,8 +15,8 @@ export default function QueuePage() {
 
   const loadData = useCallback(async () => {
     const [orgsRes, postsRes] = await Promise.all([
-      supabase.from("organizations").select("*"),
-      supabase
+      getSupabase().from("organizations").select("*"),
+      getSupabase()
         .from("posts")
         .select("*")
         .eq("status", "pending_approval")
@@ -36,12 +36,12 @@ export default function QueuePage() {
   }
 
   async function handleApprove(postId: string) {
-    await supabase.from("posts").update({ status: "approved" }).eq("id", postId);
+    await getSupabase().from("posts").update({ status: "approved" }).eq("id", postId);
     loadData();
   }
 
   async function handleReject(postId: string) {
-    await supabase.from("posts").update({ status: "rejected" }).eq("id", postId);
+    await getSupabase().from("posts").update({ status: "rejected" }).eq("id", postId);
     loadData();
   }
 
@@ -51,7 +51,7 @@ export default function QueuePage() {
   }
 
   async function saveEdit(postId: string) {
-    await supabase
+    await getSupabase()
       .from("posts")
       .update({ caption: editCaption })
       .eq("id", postId);
@@ -78,7 +78,7 @@ export default function QueuePage() {
 
   async function bulkApprove() {
     const ids = Array.from(selectedIds);
-    await supabase
+    await getSupabase()
       .from("posts")
       .update({ status: "approved" })
       .in("id", ids);

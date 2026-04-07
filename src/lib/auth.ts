@@ -1,19 +1,19 @@
-import { supabase } from "./supabase";
+import { getSupabase } from "./supabase";
 
 export async function getSession() {
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await getSupabase().auth.getSession();
   return session;
 }
 
 export async function getUser() {
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await getSupabase().auth.getUser();
   return user;
 }
 
 export async function signOut() {
-  await supabase.auth.signOut();
+  await getSupabase().auth.signOut();
 }

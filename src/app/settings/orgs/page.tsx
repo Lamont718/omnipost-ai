@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import AppShell from "@/components/AppShell";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Organization, VoiceProfile } from "@/lib/types";
 import { getOrgStyle } from "@/lib/org-colors";
 
@@ -13,7 +13,7 @@ export default function OrganizationsPage() {
   const [editVoice, setEditVoice] = useState<VoiceProfile | null>(null);
 
   const loadOrgs = useCallback(async () => {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from("organizations")
       .select("*")
       .order("name");
@@ -33,7 +33,7 @@ export default function OrganizationsPage() {
     if (!editingOrg || !editVoice) return;
     setSaving(true);
 
-    await supabase
+    await getSupabase()
       .from("organizations")
       .update({ voice_profile: editVoice as unknown as Record<string, unknown> })
       .eq("id", editingOrg.id);

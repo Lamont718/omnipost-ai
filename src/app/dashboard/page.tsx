@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import AppShell from "@/components/AppShell";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { Organization, Post, Platform } from "@/lib/types";
 import { getOrgStyle } from "@/lib/org-colors";
 
@@ -30,8 +30,8 @@ export default function DashboardPage() {
 
   const loadData = useCallback(async () => {
     const [orgsRes, postsRes] = await Promise.all([
-      supabase.from("organizations").select("*"),
-      supabase.from("posts").select("*, organization:organizations(*)"),
+      getSupabase().from("organizations").select("*"),
+      getSupabase().from("posts").select("*, organization:organizations(*)"),
     ]);
 
     if (orgsRes.data) {
@@ -92,12 +92,12 @@ export default function DashboardPage() {
   }
 
   async function handleApprove(postId: string) {
-    await supabase.from("posts").update({ status: "approved" }).eq("id", postId);
+    await getSupabase().from("posts").update({ status: "approved" }).eq("id", postId);
     loadData();
   }
 
   async function handleReject(postId: string) {
-    await supabase.from("posts").update({ status: "rejected" }).eq("id", postId);
+    await getSupabase().from("posts").update({ status: "rejected" }).eq("id", postId);
     loadData();
   }
 
