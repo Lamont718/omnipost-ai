@@ -21,6 +21,16 @@ export interface TopicSource {
   exclude?: RegExp[];
 }
 
+/**
+ * An evergreen angle to post about when a brand has no site (or the site gave
+ * us nothing this week). Either a bare string, or a `{ title, facts }` pair
+ * where `facts` is verified canon the model is then allowed to quote — real
+ * book refrains, real premises. Without `facts` the grounding rule bars all
+ * specifics, which is correct for a vague prompt but wrong for a book whose
+ * lines are real. See the grounding rule in lib/compose.ts.
+ */
+export type EvergreenTopic = string | { title: string; facts: string };
+
 export interface Brand {
   slug: string;
   name: string;
@@ -39,7 +49,7 @@ export interface Brand {
    */
   sources: TopicSource[];
   /** Used when no source yields a fresh topic. Rotates week to week. */
-  evergreenTopics: string[];
+  evergreenTopics: EvergreenTopic[];
 }
 
 /** Paths that are never worth a social post, on any site. */
@@ -342,6 +352,154 @@ export const BRANDS: Brand[] = [
     sources: [],
     evergreenTopics: [
       "What people miss the first time they watch an adaptive game",
+    ],
+  },
+  // ------------------------------------------------------------------ books
+  {
+    slug: "iris-and-sage",
+    name: "Iris & Sage",
+    colorHex: "#4338CA",
+    active: true,
+    postsPerWeek: 2,
+    platforms: ["instagram", "facebook"],
+    voice: {
+      tone: "Warm, calm, emotionally intelligent — gentle without being soft-headed; talks to a grown-up who wants to help a child, never preachy",
+      audience:
+        "Parents, teachers, counselors and homeschoolers of kids roughly 5–9 who want real language for big feelings",
+      cultural_context:
+        "Iris & Sage is an illustrated feelings series with two Black kid-guardians, both age 9. The premise: Iris sees, Sage grows, the storm passes. Each book takes one hard feeling and gives a child a concrete move to make with it. The books are still being finished — nothing is on sale yet; the work now is building the audience that will want them.",
+      emoji_style: "minimal",
+      banned_words: [
+        "empower",
+        "screen time",
+        "must-have",
+        "content",
+        "leverage",
+        "SEL solution",
+        "toolkit",
+      ],
+      hashtags: [
+        "#IrisAndSage",
+        "#BigFeelings",
+        "#KidsBooks",
+        "#SocialEmotionalLearning",
+        "#PictureBooks",
+      ],
+      keywords: [
+        "feelings",
+        "picture book",
+        "kids",
+        "emotions",
+        "parenting",
+        "classroom",
+      ],
+      example_posts: [],
+    },
+    sources: [],
+    evergreenTopics: [
+      {
+        title: "The whole series in three lines",
+        facts:
+          "The premise of Iris & Sage: Iris sees. Sage grows. The storm passes. Two Black kid-guardians, both age 9, who help a child through one big feeling per book.",
+      },
+      {
+        title: "The book about fear, and the move it teaches",
+        facts:
+          "The Iris & Sage book about fear ends on the refrain: 'Look at it. Name it. Take one small step.' A child learns to face a fear by naming it and taking one small action, not by pretending it isn't there.",
+      },
+      {
+        title: "The book about anger",
+        facts:
+          "The Iris & Sage book about anger ends on the refrain: 'Anger is real. Let it cool before you let it out.' The point is that anger is allowed — the skill is the pause before acting on it.",
+      },
+      {
+        title: "The book about grief",
+        facts:
+          "The Iris & Sage book about grief ends on the refrain: 'Love doesn't leave when they do.' It's about letting yourself be sad and letting love keep growing forward.",
+      },
+      {
+        title: "The book about loneliness",
+        facts:
+          "The Iris & Sage book about loneliness ends on the refrain: 'Reach, and you'll find you were never alone.' The lie it names is 'you're the only one'; the room is full of others also hiding.",
+      },
+      {
+        title: "The book about making mistakes",
+        facts:
+          "The Iris & Sage book about shame and mistakes ends on the refrain: 'A mistake is a step, not a stain.' It reframes a public mistake as part of learning rather than proof of failure.",
+      },
+      {
+        title: "Why one feeling per book",
+        facts:
+          "Iris & Sage gives each hard feeling its own book — fear, anger, grief, jealousy, loneliness, shame, and change — so a child and grown-up can reach for the one that matches the day.",
+      },
+    ],
+  },
+  {
+    slug: "emeka-ignites",
+    name: "Emeka Ignites",
+    colorHex: "#F59E0B",
+    active: true,
+    postsPerWeek: 2,
+    platforms: ["instagram", "facebook"],
+    voice: {
+      tone: "Warm, proud and wonder-filled — adventure energy for young kids, never cynical; the same parent-to-parent voice as Emeka Explores with a spark of the heroic",
+      audience:
+        "Black parents, teachers and homeschoolers of kids roughly 4–9 who already love a hero story",
+      cultural_context:
+        "Emeka Ignites is a superhero series where the superpower is curiosity. The yellow star on Emeka's shirt lights up when she truly learns something. She never becomes someone else — she stays Emeka. Her opposite is 'The Dim', a force that makes people stop wondering. It's a spin-off of Emeka Explores. The books are being built now and are not yet released; the work is building anticipation.",
+      emoji_style: "minimal",
+      banned_words: [
+        "empower",
+        "content",
+        "must-have",
+        "learning journey",
+        "STEM solution",
+        "gritty",
+      ],
+      hashtags: [
+        "#EmekaIgnites",
+        "#CuriosityIsThePower",
+        "#BlackGirlMagic",
+        "#KidsBooks",
+        "#BlackKidsBooks",
+      ],
+      keywords: [
+        "curiosity",
+        "superhero",
+        "Emeka",
+        "kids",
+        "wonder",
+        "learning",
+      ],
+      example_posts: [],
+    },
+    sources: [],
+    evergreenTopics: [
+      {
+        title: "The one idea the whole series is built on",
+        facts:
+          "In Emeka Ignites, curiosity is the superpower. The yellow star on Emeka's shirt lights up when she truly learns something — the more she wonders and discovers, the brighter it burns.",
+      },
+      {
+        title: "Meet the villain: The Dim",
+        facts:
+          "The villain in Emeka Ignites is 'The Dim' — not a person, but a force that makes people stop wondering and stop asking questions. Emeka fights it by staying curious.",
+      },
+      {
+        title: "A hero who never changes who she is",
+        facts:
+          "Emeka Ignites has no secret identity and no costume change. Emeka doesn't become someone else to be powerful — she stays herself. The power was already hers.",
+      },
+      {
+        title: "The rules that give the power its stakes",
+        facts:
+          "In Emeka Ignites the star-power has rules: it can't be forced, it can't be learned alone, and it fades if you stop using it. Curiosity has to be real, shared, and kept alive.",
+      },
+      {
+        title: "The first book, told through the North Star",
+        facts:
+          "The first Emeka Ignites book centers on a grandmother's story of the North Star and people walking toward freedom — told hopefully and gently, faces lit by starlight.",
+      },
     ],
   },
   {

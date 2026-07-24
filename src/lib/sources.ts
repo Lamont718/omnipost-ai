@@ -1,4 +1,4 @@
-import { Brand, TopicSource } from "./brands";
+import { Brand, EvergreenTopic, TopicSource } from "./brands";
 
 /**
  * Topic discovery.
@@ -198,16 +198,21 @@ export async function topicsForBrand(
     });
   }
 
-  // Top up from evergreens if the site gave us less than we wanted. These carry
-  // no context, which is deliberate — an evergreen post has no verified page
-  // behind it, so the model gets nothing to quote specifics from.
+  // Top up from evergreens if the site gave us less than we wanted. A bare
+  // string carries no context (the model gets no specifics to invent from); a
+  // `{ title, facts }` entry passes verified canon through as context.
   if (topics.length < want && brand.evergreenTopics.length > 0) {
-    for (const title of rotate(
+    for (const entry of rotate(
       brand.evergreenTopics,
       want - topics.length,
       week,
     )) {
-      topics.push({ title, source: "evergreen" });
+      const e: EvergreenTopic = entry;
+      topics.push(
+        typeof e === "string"
+          ? { title: e, source: "evergreen" }
+          : { title: e.title, context: e.facts, source: "evergreen" },
+      );
     }
   }
 
