@@ -1,135 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { createServerClient } from "@/lib/supabase";
-import { GenerateRequest, VoiceProfile } from "@/lib/types";
+import { brandBySlug, BRANDS } from "@/lib/brands";
+import { composePost } from "@/lib/compose";
+import { Platform } from "@/lib/types";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function buildSystemPrompt(orgName: string, voice: VoiceProfile, platform: string): string {
-  return `You are the social media voice for ${orgName}. You write authentic, purpose-driven social media content.
+const PLATFORMS: Platform[] = ["instagram", "facebook", "linkedin", "x"];
 
-BRAND VOICE:
-- Tone: ${voice.tone}
-- Target Audience: ${voice.audience}
-- Cultural Context: ${voice.cultural_context}
-- Emoji Style: ${voice.emoji_style === "none" ? "Do NOT use any emojis." : voice.emoji_style === "minimal" ? "Use emojis sparingly — only when they add warmth or clarity, never decorative. Maximum 2 per post." : "Use emojis for emphasis and humor, but never more than 2 per post and never randomly."}
-
-BANNED WORDS (never use these): ${voice.banned_words.join(", ")}
-
-PREFERRED HASHTAGS: ${voice.hashtags.join(" ")}
-
-${voice.keywords?.length ? `KEY TOPICS: ${voice.keywords.join(", ")}` : ""}
-
-PLATFORM: ${platform}
-${platform === "linkedin" ? "Write 2-3 short paragraphs. Professional tone. No emojis. End with a professional close." : ""}
-${platform === "x" ? "Keep it under 280 characters. Punchy and shareable." : ""}
-${platform === "instagram" ? "Visual storytelling tone. Caption should complement an image." : ""}
-${platform === "facebook" ? "Conversational and community-oriented. Can be slightly longer." : ""}
-
-CONTENT RULES (non-negotiable):
-1. Never use generic motivational filler like "Every day is a chance to..." or "In a world where..."
-2. Never stack more than 2 emojis in a single post
-3. Write from authentic community knowledge — you LIVE this work
-4. Captions must feel like they were written by a real person, not a marketing bot
-5. Keep captions under 150 words unless the context demands more
-6. Every post must have a clear purpose: inform, celebrate, recruit, or inspire action
-7. NEVER put hashtags mid-sentence — always place them at the end
-8. Write in a way that is specific, not generic. Reference real details when possible.
-
-Respond with ONLY a JSON object in this exact format:
-{
-  "caption": "the full post caption with hashtags at the end",
-  "suggested_hashtags": ["#tag1", "#tag2"],
-  "recommended_post_time": "a suggested time like '10:00 AM EST' based on platform best practices",
-  "platform_notes": "one sentence about why this caption works for this platform"
-}`;
-}
-
+/**
+ * Draft a single post on demand.
+ *
+ * Takes a brand slug (see lib/brands.ts) rather than the old `org_id` UUID, and
+ * no longer writes to Supabase — voices live in code now and the weekly digest
+ * is how drafts reach you. Restoring a database is not a prerequisite for this
+ * endpoint to work.
+ *
+ *   POST /api/generate
+ *   { "brand": "yodm", "topic": "...", "platform": "x", "tone_override": "..." }
+ */
 export async function POST(request: NextRequest) {
   try {
-    const body: GenerateRequest = await request.json();
-    const { org_id, topic, platform, tone_override } = body;
+    const body = await request.json();
+    const { brand: slug, topic, platform, tone_override } = body ?? {};
 
-    if (!org_id || !topic || !platform) {
+    if (!slug || !topic || !platform) {
       return NextResponse.json(
-        { error: "Missing required fields: org_id, topic, platform" },
-        { status: 400 }
+        {
+          error: "Missing required fields: brand, topic, platform",
+          brands: BRANDS.map((b) => b.slug),
+        },
+        { status: 400 },
       );
     }
 
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-    const supabase = createServerClient();
-
-    const { data: orgData, error: orgError } = await supabase
-      .from("organizations")
-      .select("*")
-      .eq("id", org_id)
-      .single();
-
-    if (orgError || !orgData) {
+    if (!PLATFORMS.includes(platform)) {
       return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 }
+        { error: `platform must be one of: ${PLATFORMS.join(", ")}` },
+        { status: 400 },
       );
     }
 
-    const voice = orgData.voice_profile as VoiceProfile;
-    const systemPrompt = buildSystemPrompt(orgData.name, voice, platform);
-
-    const userPrompt = tone_override
-      ? `Write a ${platform} post about: ${topic}\n\nTone adjustment: ${tone_override}`
-      : `Write a ${platform} post about: ${topic}`;
-
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-
-    const responseText =
-      message.content[0].type === "text" ? message.content[0].text : "";
-
-    let parsed;
-    try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
-    } catch {
-      parsed = {
-        caption: responseText,
-        suggested_hashtags: voice.hashtags,
-        recommended_post_time: "10:00 AM EST",
-        platform_notes: "AI-generated content",
-      };
+    const brand = brandBySlug(slug);
+    if (!brand) {
+      return NextResponse.json(
+        { error: `Unknown brand: ${slug}`, brands: BRANDS.map((b) => b.slug) },
+        { status: 404 },
+      );
     }
 
-    // Save as pending_approval post
-    const { error: insertError } = await supabase.from("posts").insert({
-      org_id,
-      caption: parsed.caption,
+    const post = await composePost({
+      brand,
+      // `context` is optional verified copy; without it the model is barred
+      // from inventing specifics. See the grounding rule in lib/compose.ts.
+      topic: { title: topic, context: body.context },
       platform,
-      status: "pending_approval",
-      ai_generated: true,
-      image_url: null,
-      scheduled_at: null,
-      published_at: null,
+      toneOverride: tone_override,
     });
 
-    if (insertError) {
-      return NextResponse.json(
-        { error: "Failed to save post: " + insertError.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(parsed);
+    return NextResponse.json(post);
   } catch (error) {
     console.error("Generate error:", error);
     return NextResponse.json(
       { error: "Failed to generate content" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
