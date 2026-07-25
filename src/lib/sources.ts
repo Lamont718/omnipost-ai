@@ -165,7 +165,8 @@ export async function topicsForBrand(
   brand: Brand,
   now: Date = new Date(),
 ): Promise<Topic[]> {
-  const want = brand.postsPerWeek;
+  // One topic per scheduled slot.
+  const want = brand.schedule.length;
   const week = weekIndex(now);
 
   const all: SitemapEntry[] = [];

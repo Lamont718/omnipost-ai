@@ -1,30 +1,30 @@
 import { NextResponse } from "next/server";
-import { buildDigest, sendDigest, renderDigestHtml, totalPosts } from "@/lib/digest";
+import { scheduledPostsInRange } from "@/lib/schedule";
+import { brandBySlug } from "@/lib/brands";
+import { composePost } from "@/lib/compose";
+import { writeCaptions, CaptionMap } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-/** Where the digest goes. Override with REPORT_EMAIL without touching code. */
-const OWNER_EMAIL = process.env.REPORT_EMAIL ?? "lamont@communitynyc.org";
-
 /**
- * The Monday morning digest — every active brand's posts for the week, written
- * and ready to paste. Topics come from each brand's own sitemap (see
- * lib/sources.ts), so nothing needs typing in.
+ * Weekly generation run — writes the coming week's captions into the store so
+ * they're already on the calendar when the week starts. This replaces the old
+ * email digest: the calendar is the deliverable now, not an inbox.
  *
- * Cron is `0 12 * * 1` UTC = 8am Monday in New York on Eastern Daylight Time.
- * Vercel crons have no timezone, so from November (EST) it lands at 7am.
+ * Cron is `0 12 * * 1` UTC = 8am Monday in New York (EDT). It fills the seven
+ * days starting today, so Monday's run covers Mon–Sun.
  *
- * Triggered by Vercel Cron (see vercel.json), which sends
- * `Authorization: Bearer $CRON_SECRET`. Also callable by hand:
+ * Triggered by Vercel Cron (Authorization: Bearer $CRON_SECRET). By hand:
+ *   Fill the week now:   GET /api/cron/weekly-digest?secret=$CRON_SECRET
+ *   Preview, no writes:  …&preview=1
+ *   One brand only:      …&brand=yodm
+ *   N days ahead:        …&days=14
  *
- *   Send it now:          GET /api/cron/weekly-digest?secret=$CRON_SECRET
- *   Read the drafts
- *   without sending:      …&preview=1
- *   See the actual email: …&preview=html
- *   One brand only:       …&brand=yodm
- *   Send somewhere else:  …&to=someone@example.com
+ * Requires BLOB_READ_WRITE_TOKEN to persist. Without it, generation still runs
+ * and preview works, but nothing is saved (the calendar then generates on
+ * demand instead).
  */
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -35,10 +35,7 @@ function authorized(request: Request): boolean {
 
 export async function GET(request: Request) {
   if (!process.env.CRON_SECRET) {
-    return NextResponse.json(
-      { error: "CRON_SECRET is not set" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "CRON_SECRET is not set" }, { status: 500 });
   }
   if (!authorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -46,49 +43,68 @@ export async function GET(request: Request) {
 
   const params = new URL(request.url).searchParams;
   const preview = params.get("preview");
-  const brand = params.get("brand") ?? undefined;
-  const to = params.get("to") ?? OWNER_EMAIL;
+  const onlyBrand = params.get("brand");
+  const days = Math.min(Math.max(Number(params.get("days")) || 7, 1), 31);
+
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + days - 1);
 
   try {
-    const digest = await buildDigest(new Date(), brand);
+    let slots = await scheduledPostsInRange(start, end);
+    if (onlyBrand) slots = slots.filter((s) => s.brandSlug === onlyBrand);
 
-    if (preview === "html") {
-      return new NextResponse(renderDigestHtml(digest), {
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
-    }
+    const captions: CaptionMap = {};
+    const failures: string[] = [];
+
+    // Generate concurrently — sequential overruns the function timeout.
+    await Promise.all(
+      slots.map(async (slot) => {
+        const brand = brandBySlug(slot.brandSlug);
+        if (!brand) return;
+        try {
+          const post = await composePost({
+            brand,
+            topic: { title: slot.topic.title, context: slot.topic.context },
+            platform: slot.platform,
+          });
+          captions[slot.id] = { ...post, generatedAt: new Date().toISOString() };
+        } catch (err) {
+          failures.push(`${slot.brandSlug} ${slot.date}: ${err instanceof Error ? err.message : err}`);
+        }
+      }),
+    );
 
     if (preview) {
       return NextResponse.json({
-        sent: false,
-        week: digest.week,
-        posts: totalPosts(digest),
-        brands: digest.brands.map((b) => ({
-          brand: b.brand.name,
-          error: b.error,
-          posts: b.posts.map((p) => ({
-            platform: p.platform,
-            source: p.topic.source,
-            url: p.topic.url,
-            caption: p.post.caption,
-          })),
+        written: false,
+        range: { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) },
+        generated: Object.keys(captions).length,
+        failures,
+        sample: slots.slice(0, 20).map((s) => ({
+          date: s.date,
+          time: s.time,
+          platform: s.platform,
+          brand: s.brandName,
+          caption: captions[s.id]?.caption ?? null,
         })),
       });
     }
 
-    await sendDigest(to, digest);
+    const persisted = await writeCaptions(captions);
 
     return NextResponse.json({
-      sent: true,
-      to,
-      week: digest.week,
-      posts: totalPosts(digest),
-      failed: digest.brands.filter((b) => b.error).map((b) => b.brand.name),
+      written: persisted > 0,
+      persisted,
+      generated: Object.keys(captions).length,
+      failures,
+      note: persisted === 0 ? "BLOB_READ_WRITE_TOKEN not set — nothing saved" : undefined,
     });
   } catch (error) {
-    console.error("weekly-digest failed:", error);
+    console.error("weekly generation failed:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Digest failed" },
+      { error: error instanceof Error ? error.message : "Failed" },
       { status: 500 },
     );
   }

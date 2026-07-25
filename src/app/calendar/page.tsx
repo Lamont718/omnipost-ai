@@ -1,10 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import AppShell from "@/components/AppShell";
-import { getSupabase } from "@/lib/supabase";
-import { Organization, Post } from "@/lib/types";
-import { getOrgStyle } from "@/lib/org-colors";
 import {
   startOfMonth,
   endOfMonth,
@@ -18,216 +14,411 @@ import {
   subMonths,
 } from "date-fns";
 
+/** Shape returned by /api/schedule. */
+interface SlotPost {
+  id: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  platform: "instagram" | "facebook" | "linkedin" | "x";
+  brand: { slug: string; name: string; colorHex: string };
+  topic: { title: string; context?: string; url?: string; source: string };
+  caption: string | null;
+}
+
+const PLATFORM_LABEL: Record<SlotPost["platform"], string> = {
+  instagram: "IG",
+  facebook: "FB",
+  linkedin: "LI",
+  x: "X",
+};
+
+/** Locally-written captions + "posted" flags, so the tool needs no login. */
+const LS_CAPTIONS = "omnipost.captions";
+const LS_POSTED = "omnipost.posted";
+
+function loadLS(key: string): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(key) || "{}");
+  } catch {
+    return {};
+  }
+}
+function saveLS(key: string, v: Record<string, string>) {
+  localStorage.setItem(key, JSON.stringify(v));
+}
+
+function to12h(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
 export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [orgs, setOrgs] = useState<Organization[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [posts, setPosts] = useState<SlotPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<SlotPost | null>(null);
 
-  const loadData = useCallback(async () => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
+  // Client-side caption overrides + posted flags.
+  const [localCaptions, setLocalCaptions] = useState<Record<string, string>>({});
+  const [posted, setPosted] = useState<Record<string, string>>({});
 
-    const [orgsRes, postsRes] = await Promise.all([
-      getSupabase().from("organizations").select("*"),
-      getSupabase()
-        .from("posts")
-        .select("*")
-        .in("status", ["scheduled", "approved", "published"])
-        .gte("scheduled_at", monthStart.toISOString())
-        .lte("scheduled_at", monthEnd.toISOString()),
-    ]);
+  useEffect(() => {
+    setLocalCaptions(loadLS(LS_CAPTIONS));
+    setPosted(loadLS(LS_POSTED));
+  }, []);
 
-    if (orgsRes.data) setOrgs(orgsRes.data);
-    if (postsRes.data) setPosts(postsRes.data as Post[]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/schedule?month=${format(currentMonth, "yyyy-MM")}`);
+      const data = await res.json();
+      setPosts(data.posts ?? []);
+    } finally {
+      setLoading(false);
+    }
   }, [currentMonth]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    load();
+  }, [load]);
 
-  function getOrg(orgId: string) {
-    return orgs.find((o) => o.id === orgId);
+  function captionFor(p: SlotPost): string | null {
+    return localCaptions[p.id] ?? p.caption;
   }
 
-  function getPostsForDay(date: Date) {
-    return posts.filter(
-      (p) => p.scheduled_at && isSameDay(new Date(p.scheduled_at), date)
-    );
+  function postsForDay(date: Date): SlotPost[] {
+    const key = format(date, "yyyy-MM-dd");
+    return posts.filter((p) => p.date === key);
   }
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const calStart = startOfWeek(monthStart);
-  const calEnd = endOfWeek(monthEnd);
-  const days = eachDayOfInterval({ start: calStart, end: calEnd });
+  const gridStart = startOfWeek(startOfMonth(currentMonth));
+  const gridEnd = endOfWeek(endOfMonth(currentMonth));
+  const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
 
-  const selectedDayPosts = selectedDate ? getPostsForDay(selectedDate) : [];
+  const filledCount = posts.filter((p) => captionFor(p)).length;
 
   return (
-    <AppShell>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+    <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
+      <div style={{ padding: "24px", maxWidth: 1100, margin: "0 auto" }}>
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 8,
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>
               Content Calendar
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {format(currentMonth, "MMMM yyyy")}
+            <p style={{ color: "#6b7280", fontSize: 13, margin: "4px 0 0" }}>
+              {posts.length} posts scheduled · {filledCount} written
+              {loading ? " · loading…" : ""}
             </p>
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-              className="p-2 rounded-lg hover:bg-gray-100 transition"
-            >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} style={navBtn}>
+              ‹
             </button>
-            <button
-              onClick={() => setCurrentMonth(new Date())}
-              className="text-sm font-medium text-brand-500 hover:text-brand-600 px-3 py-1.5"
-            >
-              Today
-            </button>
-            <button
-              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-              className="p-2 rounded-lg hover:bg-gray-100 transition"
-            >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+            <span style={{ fontWeight: 600, minWidth: 150, textAlign: "center" }}>
+              {format(currentMonth, "MMMM yyyy")}
+            </span>
+            <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} style={navBtn}>
+              ›
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          {/* Day Headers */}
-          <div className="grid grid-cols-7 border-b border-gray-100">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+        {/* Weekday header */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            <div
+              key={d}
+              style={{
+                textAlign: "center",
+                fontSize: 11,
+                fontWeight: 600,
+                color: "#9ca3af",
+                padding: "6px 0",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+              }}
+            >
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Month grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
+          {days.map((day) => {
+            const dayPosts = postsForDay(day);
+            const inMonth = isSameMonth(day, currentMonth);
+            const today = isSameDay(day, new Date());
+            return (
               <div
-                key={day}
-                className="py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                key={day.toISOString()}
+                style={{
+                  minHeight: 96,
+                  border: "1px solid #eef0f2",
+                  borderRadius: 8,
+                  padding: 6,
+                  background: inMonth ? "#fff" : "#fafafa",
+                  opacity: inMonth ? 1 : 0.6,
+                }}
               >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7">
-            {days.map((day, i) => {
-              const dayPosts = getPostsForDay(day);
-              const isCurrentMonth = isSameMonth(day, currentMonth);
-              const isToday = isSameDay(day, new Date());
-              const isSelected = selectedDate && isSameDay(day, selectedDate);
-
-              return (
-                <button
-                  key={i}
-                  onClick={() => setSelectedDate(day)}
-                  className={`min-h-[80px] lg:min-h-[100px] p-2 border-b border-r border-gray-50 text-left transition hover:bg-gray-50 ${
-                    !isCurrentMonth ? "bg-gray-25 opacity-40" : ""
-                  } ${isSelected ? "ring-2 ring-inset ring-brand-500" : ""}`}
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: today ? 700 : 500,
+                    color: today ? "#2563eb" : "#6b7280",
+                    marginBottom: 4,
+                  }}
                 >
-                  <span
-                    className={`text-sm font-medium ${
-                      isToday
-                        ? "bg-brand-500 text-white w-7 h-7 rounded-full flex items-center justify-center"
-                        : "text-gray-700"
-                    }`}
-                  >
-                    {format(day, "d")}
-                  </span>
-
-                  <div className="mt-1 space-y-1">
-                    {dayPosts.slice(0, 3).map((post) => {
-                      const org = getOrg(post.org_id);
-                      const style = org
-                        ? getOrgStyle(org.color_hex)
-                        : getOrgStyle("");
-                      return (
-                        <div
-                          key={post.id}
-                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium truncate ${style.badge}`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${style.dot} flex-shrink-0`} />
-                          <span className="truncate">{org?.name}</span>
-                        </div>
-                      );
-                    })}
-                    {dayPosts.length > 3 && (
-                      <span className="text-[10px] text-gray-400 pl-1">
-                        +{dayPosts.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Selected Day Detail */}
-        {selectedDate && (
-          <div className="bg-white rounded-xl border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {format(selectedDate, "EEEE, MMMM d, yyyy")}
-            </h2>
-
-            {selectedDayPosts.length === 0 ? (
-              <p className="text-sm text-gray-400">No posts scheduled for this day.</p>
-            ) : (
-              <div className="space-y-3">
-                {selectedDayPosts.map((post) => {
-                  const org = getOrg(post.org_id);
-                  const style = org
-                    ? getOrgStyle(org.color_hex)
-                    : getOrgStyle("");
+                  {format(day, "d")}
+                </div>
+                {dayPosts.map((p) => {
+                  const written = !!captionFor(p);
+                  const isPosted = !!posted[p.id];
                   return (
-                    <div
-                      key={post.id}
-                      className="border border-gray-100 rounded-lg p-4"
+                    <button
+                      key={p.id}
+                      onClick={() => setSelected(p)}
+                      title={`${p.brand.name} · ${to12h(p.time)} · ${p.topic.title}`}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        textAlign: "left",
+                        border: "none",
+                        borderLeft: `3px solid ${p.brand.colorHex}`,
+                        background: isPosted ? "#f0fdf4" : written ? "#f8fafc" : "#fff",
+                        borderRadius: 4,
+                        padding: "3px 5px",
+                        marginBottom: 3,
+                        cursor: "pointer",
+                        fontSize: 10.5,
+                        lineHeight: 1.3,
+                      }}
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${style.badge}`}
-                        >
-                          {org?.name}
-                        </span>
-                        <span className="text-xs text-gray-400 capitalize">
-                          {post.platform}
-                        </span>
-                        <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full ml-auto ${
-                            post.status === "published"
-                              ? "bg-green-100 text-green-700"
-                              : post.status === "scheduled"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {post.status}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                        {post.caption}
-                      </p>
-                      {post.scheduled_at && (
-                        <p className="text-xs text-gray-400 mt-2">
-                          Scheduled: {format(new Date(post.scheduled_at), "h:mm a")}
-                        </p>
-                      )}
-                    </div>
+                      <span style={{ color: "#374151", fontWeight: 600 }}>
+                        {to12h(p.time)}
+                      </span>{" "}
+                      <span style={{ color: "#9ca3af" }}>
+                        {PLATFORM_LABEL[p.platform]}
+                      </span>
+                      <br />
+                      <span style={{ color: p.brand.colorHex, fontWeight: 600 }}>
+                        {p.brand.name}
+                      </span>{" "}
+                      {isPosted ? "✓" : written ? "" : "·"}
+                    </button>
                   );
                 })}
               </div>
-            )}
-          </div>
+            );
+          })}
+        </div>
+
+        {selected && (
+          <PostDetail
+            post={selected}
+            caption={captionFor(selected)}
+            posted={!!posted[selected.id]}
+            onClose={() => setSelected(null)}
+            onCaption={(text) => {
+              const next = { ...localCaptions, [selected.id]: text };
+              setLocalCaptions(next);
+              saveLS(LS_CAPTIONS, next);
+            }}
+            onTogglePosted={() => {
+              const next = { ...posted };
+              if (next[selected.id]) delete next[selected.id];
+              else next[selected.id] = new Date().toISOString();
+              setPosted(next);
+              saveLS(LS_POSTED, next);
+            }}
+          />
         )}
       </div>
-    </AppShell>
+    </div>
   );
 }
+
+function PostDetail({
+  post,
+  caption,
+  posted,
+  onClose,
+  onCaption,
+  onTogglePosted,
+}: {
+  post: SlotPost;
+  caption: string | null;
+  posted: boolean;
+  onClose: () => void;
+  onCaption: (text: string) => void;
+  onTogglePosted: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function generate() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/slot", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: post.id,
+          brand: post.brand.slug,
+          platform: post.platform,
+          topic: { title: post.topic.title, context: post.topic.context },
+        }),
+      });
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else onCaption(data.caption);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function copy() {
+    if (!caption) return;
+    navigator.clipboard.writeText(caption);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div onClick={onClose} style={overlay}>
+      <div onClick={(e) => e.stopPropagation()} style={modal}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: post.brand.colorHex }}>
+              {post.brand.name}
+            </div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+              {format(new Date(post.date + "T00:00"), "EEEE, MMM d")} · {to12h(post.time)} ·{" "}
+              {PLATFORM_LABEL[post.platform]}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ ...navBtn, fontSize: 18 }}>
+            ×
+          </button>
+        </div>
+
+        <div style={{ fontSize: 13, color: "#374151", margin: "12px 0 6px", fontWeight: 600 }}>
+          Topic
+        </div>
+        <div style={{ fontSize: 13, color: "#4b5563" }}>{post.topic.title}</div>
+        {post.topic.url && (
+          <a href={post.topic.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#6b7280" }}>
+            {post.topic.url}
+          </a>
+        )}
+
+        <div style={{ fontSize: 13, color: "#374151", margin: "16px 0 6px", fontWeight: 600 }}>
+          Post
+        </div>
+        {caption ? (
+          <div
+            style={{
+              whiteSpace: "pre-wrap",
+              fontSize: 14,
+              lineHeight: 1.6,
+              color: "#111827",
+              background: "#f8fafc",
+              border: "1px dashed #d1d5db",
+              borderRadius: 8,
+              padding: 12,
+            }}
+          >
+            {caption}
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>
+            Not written yet.
+          </div>
+        )}
+
+        {error && <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 8 }}>{error}</div>}
+
+        <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+          <button onClick={generate} disabled={busy} style={primaryBtn}>
+            {busy ? "Writing…" : caption ? "Rewrite" : "Write this post"}
+          </button>
+          {caption && (
+            <button onClick={copy} style={secondaryBtn}>
+              {copied ? "Copied ✓" : "Copy"}
+            </button>
+          )}
+          <button onClick={onTogglePosted} style={secondaryBtn}>
+            {posted ? "Posted ✓ — undo" : "Mark as posted"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const navBtn: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  background: "#fff",
+  borderRadius: 8,
+  width: 32,
+  height: 32,
+  cursor: "pointer",
+  fontSize: 16,
+  lineHeight: 1,
+};
+const overlay: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.4)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 16,
+  zIndex: 50,
+};
+const modal: React.CSSProperties = {
+  background: "#fff",
+  borderRadius: 12,
+  padding: 20,
+  maxWidth: 520,
+  width: "100%",
+  maxHeight: "85vh",
+  overflowY: "auto",
+};
+const primaryBtn: React.CSSProperties = {
+  background: "#111827",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  padding: "8px 14px",
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 600,
+};
+const secondaryBtn: React.CSSProperties = {
+  background: "#fff",
+  color: "#374151",
+  border: "1px solid #e5e7eb",
+  borderRadius: 8,
+  padding: "8px 14px",
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 600,
+};

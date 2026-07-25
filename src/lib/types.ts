@@ -10,6 +10,17 @@ export type Platform = "instagram" | "facebook" | "linkedin" | "x";
 
 export type EmojiStyle = "minimal" | "moderate" | "none";
 
+/** 0 = Sunday … 6 = Saturday, matching JS `Date.getDay()`. */
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+/** One recurring weekly posting slot for a brand. */
+export interface PostSlot {
+  day: Weekday;
+  /** 24h local time, "HH:MM". Interpreted as America/New_York. */
+  time: string;
+  platform: Platform;
+}
+
 export interface VoiceProfile {
   tone: string;
   audience: string;

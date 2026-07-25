@@ -1,4 +1,4 @@
-import { Platform, VoiceProfile } from "./types";
+import { PostSlot, VoiceProfile } from "./types";
 
 /**
  * Every brand OmniPost writes for, and how each one sounds.
@@ -35,12 +35,14 @@ export interface Brand {
   slug: string;
   name: string;
   colorHex: string;
-  /** Included in the weekly digest. */
+  /** Included in the calendar. */
   active: boolean;
-  /** How many posts the digest drafts each week. */
-  postsPerWeek: number;
-  /** Platforms to rotate through when drafting. */
-  platforms: Platform[];
+  /**
+   * The posting schedule: one entry per weekly post — weekday, time, platform.
+   * This is the whole "when do I post" model. The number of entries is how many
+   * posts a week; edit these to change your cadence.
+   */
+  schedule: PostSlot[];
   voice: VoiceProfile;
   /**
    * Topic sources. A brand with none still works — it just falls back to
@@ -64,8 +66,11 @@ export const BRANDS: Brand[] = [
     name: "YODM",
     colorHex: "#7C3AED",
     active: true,
-    postsPerWeek: 3,
-    platforms: ["instagram", "facebook", "x"],
+    schedule: [
+      { day: 2, time: "18:00", platform: "instagram" },
+      { day: 4, time: "19:00", platform: "facebook" },
+      { day: 6, time: "11:00", platform: "x" },
+    ],
     voice: {
       tone: "Bold, funny, a little confrontational — game-night energy, never corporate",
       audience:
@@ -113,8 +118,11 @@ export const BRANDS: Brand[] = [
     name: "Emeka Explores",
     colorHex: "#7C3AED",
     active: true,
-    postsPerWeek: 3,
-    platforms: ["instagram", "facebook"],
+    schedule: [
+      { day: 1, time: "09:00", platform: "instagram" },
+      { day: 3, time: "19:00", platform: "facebook" },
+      { day: 5, time: "09:00", platform: "instagram" },
+    ],
     voice: {
       tone: "Warm, proud, parent-to-parent — encouraging without being saccharine",
       audience:
@@ -162,8 +170,12 @@ export const BRANDS: Brand[] = [
     name: "MostHatedNBA",
     colorHex: "#DC2626",
     active: true,
-    postsPerWeek: 4,
-    platforms: ["x", "instagram"],
+    schedule: [
+      { day: 1, time: "20:00", platform: "x" },
+      { day: 3, time: "20:00", platform: "x" },
+      { day: 5, time: "12:00", platform: "instagram" },
+      { day: 0, time: "19:00", platform: "x" },
+    ],
     voice: {
       tone: "Bold, opinionated, barbershop energy — debate-starting, never ESPN-corporate",
       audience: "NBA fans who want real talk, not sanitized takes",
@@ -199,8 +211,10 @@ export const BRANDS: Brand[] = [
     name: "WWSH",
     colorHex: "#534AB7",
     active: true,
-    postsPerWeek: 2,
-    platforms: ["facebook", "instagram", "linkedin"],
+    schedule: [
+      { day: 2, time: "17:00", platform: "facebook" },
+      { day: 4, time: "12:00", platform: "instagram" },
+    ],
     voice: {
       tone: "Community-driven, warm, credible, Brooklyn-rooted",
       audience:
@@ -242,8 +256,7 @@ export const BRANDS: Brand[] = [
     name: "The Conductor",
     colorHex: "#0EA5E9",
     active: true,
-    postsPerWeek: 1,
-    platforms: ["x", "facebook"],
+    schedule: [{ day: 3, time: "08:00", platform: "x" }],
     voice: {
       tone: "Practical, plainspoken, New York — helpful with zero hype",
       audience:
@@ -285,8 +298,7 @@ export const BRANDS: Brand[] = [
     name: "BeyondChess",
     colorHex: "#0D9488",
     active: false,
-    postsPerWeek: 1,
-    platforms: ["facebook", "linkedin"],
+    schedule: [{ day: 3, time: "16:00", platform: "facebook" }],
     voice: {
       tone: "Smart, inspiring, education-forward, accessible to parents and kids",
       audience:
@@ -325,8 +337,7 @@ export const BRANDS: Brand[] = [
     name: "Adaptive Basketball Program",
     colorHex: "#EA580C",
     active: false,
-    postsPerWeek: 1,
-    platforms: ["facebook", "instagram"],
+    schedule: [{ day: 5, time: "17:00", platform: "facebook" }],
     voice: {
       tone: "Celebratory, community-proud, youth-focused, inclusive",
       audience: "Program families, Brooklyn community, DYCD, donors",
@@ -360,8 +371,10 @@ export const BRANDS: Brand[] = [
     name: "Iris & Sage",
     colorHex: "#4338CA",
     active: true,
-    postsPerWeek: 2,
-    platforms: ["instagram", "facebook"],
+    schedule: [
+      { day: 1, time: "10:00", platform: "instagram" },
+      { day: 4, time: "20:00", platform: "facebook" },
+    ],
     voice: {
       tone: "Warm, calm, emotionally intelligent — gentle without being soft-headed; talks to a grown-up who wants to help a child, never preachy",
       audience:
@@ -439,8 +452,10 @@ export const BRANDS: Brand[] = [
     name: "Emeka Ignites",
     colorHex: "#F59E0B",
     active: true,
-    postsPerWeek: 2,
-    platforms: ["instagram", "facebook"],
+    schedule: [
+      { day: 2, time: "10:00", platform: "instagram" },
+      { day: 6, time: "09:00", platform: "facebook" },
+    ],
     voice: {
       tone: "Warm, proud and wonder-filled — adventure energy for young kids, never cynical; the same parent-to-parent voice as Emeka Explores with a spark of the heroic",
       audience:
@@ -507,8 +522,7 @@ export const BRANDS: Brand[] = [
     name: "Our Rose LLC",
     colorHex: "#D97706",
     active: false,
-    postsPerWeek: 1,
-    platforms: ["linkedin"],
+    schedule: [{ day: 2, time: "09:00", platform: "linkedin" }],
     voice: {
       tone: "Professional, credible, mission-aligned, government contracting context",
       audience:

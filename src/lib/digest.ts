@@ -43,7 +43,8 @@ async function buildBrand(brand: Brand, now: Date): Promise<DigestBrand> {
     const posts: DigestPost[] = [];
 
     for (let i = 0; i < topics.length; i++) {
-      const platform = brand.platforms[i % brand.platforms.length];
+      // Topic i fills schedule slot i; use that slot's platform.
+      const platform = brand.schedule[i % brand.schedule.length].platform;
       const post = await composePost({
         brand,
         topic: { title: topics[i].title, context: topics[i].context },

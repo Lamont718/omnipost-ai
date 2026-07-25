@@ -57,7 +57,7 @@ export default function HomePage() {
             OmniPost <span className="text-brand-500">AI</span>
           </h1>
           <Link
-            href="/login"
+            href="/calendar"
             className="bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition"
           >
             Sign In
@@ -87,7 +87,7 @@ export default function HomePage() {
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
-            href="/login"
+            href="/calendar"
             className="bg-brand-500 hover:bg-brand-600 text-white font-medium px-8 py-3 rounded-lg text-sm transition"
           >
             Get Started
@@ -208,10 +208,10 @@ export default function HomePage() {
             while you keep the final say.
           </p>
           <Link
-            href="/login"
+            href="/calendar"
             className="mt-8 inline-block bg-white text-brand-600 font-medium px-8 py-3 rounded-lg text-sm hover:bg-brand-50 transition"
           >
-            Sign In to Your Dashboard
+            Open the Calendar
           </Link>
         </div>
       </section>
