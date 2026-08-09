@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { scheduledPostsInRange } from "@/lib/schedule";
 import { brandBySlug } from "@/lib/brands";
 import { composePost } from "@/lib/compose";
-import { writeCaptions, CaptionMap } from "@/lib/store";
+import { compactCaptions, readCaptions, CaptionMap } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +55,19 @@ export async function GET(request: Request) {
     let slots = await scheduledPostsInRange(start, end);
     if (onlyBrand) slots = slots.filter((s) => s.brandSlug === onlyBrand);
 
+    // Don't pay to rewrite what already exists. Every run used to regenerate
+    // every slot in range, so a second run cost a full week of tokens and
+    // replaced captions that were already reviewed. `&force=1` restores the old
+    // behaviour when a reroll really is wanted.
+    const force = params.get("force") === "1";
+    let skipped = 0;
+    if (!force) {
+      const already = await readCaptions();
+      const before = slots.length;
+      slots = slots.filter((s) => !already[s.id]?.caption);
+      skipped = before - slots.length;
+    }
+
     const captions: CaptionMap = {};
     const failures: string[] = [];
 
@@ -81,6 +94,7 @@ export async function GET(request: Request) {
         written: false,
         range: { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) },
         generated: Object.keys(captions).length,
+        skipped,
         failures,
         sample: slots.slice(0, 20).map((s) => ({
           date: s.date,
@@ -92,14 +106,19 @@ export async function GET(request: Request) {
       });
     }
 
-    const persisted = await writeCaptions(captions);
+    // Compaction rather than a plain write: this run is the only writer, so it
+    // can safely fold the on-demand parts into the base file and clear them,
+    // which is what keeps reads from getting slower every week.
+    const result = await compactCaptions(captions);
 
     return NextResponse.json({
-      written: persisted > 0,
-      persisted,
+      written: result.total > 0,
       generated: Object.keys(captions).length,
+      skipped,
+      storedTotal: result.total,
+      partsCompacted: result.partsCleared,
       failures,
-      note: persisted === 0 ? "BLOB_READ_WRITE_TOKEN not set — nothing saved" : undefined,
+      note: result.total === 0 ? "BLOB_READ_WRITE_TOKEN not set — nothing saved" : undefined,
     });
   } catch (error) {
     console.error("weekly generation failed:", error);
