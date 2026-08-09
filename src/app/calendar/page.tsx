@@ -19,6 +19,7 @@ import {
   EmptyPreview,
   PLATFORM_NAME,
   PLATFORM_LIMIT,
+  generatedImageUrl,
 } from "@/components/PostPreview";
 
 /** Shape returned by /api/schedule. */
@@ -338,6 +339,39 @@ function PostDetail({
     setTimeout(() => setCopied(false), 1500);
   }
 
+  /**
+   * The same picture the preview above is showing: the topic page's own share
+   * image when it has one, otherwise the generated brand card. Resolved here as
+   * well as inside the preview so the button can never hand you a different file
+   * from the one you just looked at.
+   */
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    const generated = caption ? generatedImageUrl(post.brand.slug, caption) : null;
+    if (!post.topic.url) {
+      setImageUrl(generated);
+      return;
+    }
+    fetch(`/api/og-image?url=${encodeURIComponent(post.topic.url)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (live) setImageUrl(d.image ?? generated);
+      })
+      .catch(() => {
+        if (live) setImageUrl(generated);
+      });
+    return () => {
+      live = false;
+    };
+  }, [post.topic.url, post.brand.slug, caption]);
+
+  const downloadHref = imageUrl
+    ? `/api/download?url=${encodeURIComponent(imageUrl)}&name=${encodeURIComponent(
+        `${post.brand.slug}-${post.date}-${post.platform}`,
+      )}`
+    : null;
+
   return (
     <div onClick={onClose} style={overlay}>
       <div onClick={(e) => e.stopPropagation()} style={modal}>
@@ -434,8 +468,13 @@ function PostDetail({
           </button>
           {caption && (
             <button onClick={copy} style={secondaryBtn}>
-              {copied ? "Copied ✓" : "Copy"}
+              {copied ? "Copied ✓" : "Copy caption"}
             </button>
+          )}
+          {caption && downloadHref && (
+            <a href={downloadHref} download style={{ ...secondaryBtn, textDecoration: "none" }}>
+              Save image
+            </a>
           )}
           <button onClick={onTogglePosted} style={secondaryBtn}>
             {posted ? "Posted ✓ — undo" : "Mark as posted"}

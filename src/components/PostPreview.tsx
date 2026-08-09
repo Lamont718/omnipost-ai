@@ -184,38 +184,108 @@ function Card({ children, maxWidth = 400 }: { children: React.ReactNode; maxWidt
 }
 
 /**
- * The share image the topic's own page publishes, or null while loading / if
- * the page has none. This is the real artwork a follower would see — no image
- * is generated here.
+ * The opening line of a caption, for artwork that has to carry the post on its
+ * own. Hashtags and trailing URLs are stripped — they belong in the caption, not
+ * burned into a picture.
  */
-function useTopicImage(url?: string): string | null {
+export function hookLine(caption: string): string {
+  const body = caption
+    .replace(/https?:\/\/\S+/g, "")
+    // Same hashtag shape RichText highlights — the tsconfig target predates
+    // unicode property escapes, so this stays ASCII on purpose.
+    .replace(/#[A-Za-z0-9_]+/g, "")
+    .trim();
+  const firstPara = body.split(/\n{2,}/)[0] ?? body;
+  const sentences = firstPara.match(/[^.!?]+[.!?]?/g) ?? [firstPara];
+  let out = "";
+  for (const s of sentences) {
+    if (out && (out + s).trim().length > 170) break;
+    out += s;
+    if (out.trim().length >= 60) break;
+  }
+  return out.trim().replace(/\s+/g, " ");
+}
+
+/**
+ * Where a post's artwork comes from, in order of preference.
+ *
+ * The topic's own page publishes a share image, and that is always the better
+ * picture: it is the real thing a follower sees, already designed. But WWSH,
+ * Iris & Sage and Emeka Ignites have no website, so no page and no share image
+ * ever — and those posts were going out with nothing attached at all.
+ *
+ * So the generated card is the floor, not the goal. Every post ends up with
+ * something you can actually publish.
+ */
+export function generatedImageUrl(
+  brandSlug: string,
+  caption: string,
+  shape: "square" | "wide" = "square",
+): string {
+  const params = new URLSearchParams({
+    brand: brandSlug,
+    text: hookLine(caption),
+    shape,
+  });
+  return `/api/post-image?${params.toString()}`;
+}
+
+/**
+ * The share image the topic's own page publishes; the generated brand card when
+ * the page has none or there is no page. Null only while the lookup is in
+ * flight, so the slot never flashes empty and then fills.
+ */
+function useTopicImage(
+  url: string | undefined,
+  fallback: string | null,
+): { src: string | null; generated: boolean } {
   const [image, setImage] = useState<string | null>(null);
+  const [settled, setSettled] = useState(false);
 
   useEffect(() => {
     if (!url) {
       setImage(null);
+      setSettled(true);
       return;
     }
     let live = true;
+    setSettled(false);
     fetch(`/api/og-image?url=${encodeURIComponent(url)}`)
       .then((r) => r.json())
       .then((d) => {
-        if (live) setImage(d.image ?? null);
+        if (!live) return;
+        setImage(d.image ?? null);
+        setSettled(true);
       })
       .catch(() => {
-        if (live) setImage(null);
+        if (!live) return;
+        setImage(null);
+        setSettled(true);
       });
     return () => {
       live = false;
     };
   }, [url]);
 
-  return image;
+  if (image) return { src: image, generated: false };
+  if (settled && fallback) return { src: fallback, generated: true };
+  return { src: null, generated: false };
 }
 
-/** The post's artwork — the page's real share image, or a labelled stand-in. */
-function MediaSlot({ brand, topic }: { brand: PreviewBrand; topic: PreviewTopic }) {
-  const image = useTopicImage(topic.url);
+/** The post's artwork — the page's real share image, or the generated card. */
+function MediaSlot({
+  brand,
+  topic,
+  caption,
+}: {
+  brand: PreviewBrand;
+  topic: PreviewTopic;
+  caption?: string;
+}) {
+  const { src: image, generated } = useTopicImage(
+    topic.url,
+    caption ? generatedImageUrl(brand.slug, caption) : null,
+  );
   /** Width ÷ height of the loaded artwork, once the browser knows it. */
   const [ratio, setRatio] = useState<number | null>(null);
 
@@ -223,7 +293,9 @@ function MediaSlot({ brand, topic }: { brand: PreviewBrand; topic: PreviewTopic 
     // These are 1.91:1 share cards; an Instagram post is square. Letterbox
     // rather than crop — a preview that silently cuts half the artwork away is
     // worse than useless, because the crop is the thing worth knowing about.
-    const landscape = ratio !== null && Math.abs(ratio - 1) > 0.25;
+    // A generated card is drawn square already, so the letterbox warning below
+    // would only ever be noise on one.
+    const landscape = !generated && ratio !== null && Math.abs(ratio - 1) > 0.25;
     return (
       <div>
         <div
@@ -301,7 +373,7 @@ function MediaSlot({ brand, topic }: { brand: PreviewBrand; topic: PreviewTopic 
 
 function LinkCard({ topic, tall = false }: { topic: PreviewTopic; tall?: boolean }) {
   const domain = domainOf(topic.url);
-  const image = useTopicImage(tall ? topic.url : undefined);
+  const { src: image } = useTopicImage(tall ? topic.url : undefined, null);
   if (!domain) return null;
   return (
     <div style={{ border: "1px solid #dadde1", borderTop: "none", background: "#f7f8fa" }}>
@@ -348,7 +420,7 @@ function InstagramPost({ brand, topic, caption, when }: ShellProps) {
         <div style={{ color: "#262626", letterSpacing: 2, fontSize: 14 }}>•••</div>
       </div>
 
-      <MediaSlot brand={brand} topic={topic} />
+      <MediaSlot brand={brand} topic={topic} caption={caption} />
 
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 12px 6px", color: "#262626" }}>
         {ico(HEART)}

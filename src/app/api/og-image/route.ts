@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BRANDS } from "@/lib/brands";
+import { isAllowedHost } from "@/lib/brand-hosts";
 
 export const runtime = "nodejs";
 
@@ -22,24 +22,6 @@ export const runtime = "nodejs";
 const FETCH_TIMEOUT_MS = 8_000;
 /** Share images change rarely; a day of caching keeps the calendar quick. */
 const CACHE_SECONDS = 86_400;
-
-/** Hostnames of every brand's topic sources, plus their www/bare variants. */
-function allowedHosts(): Set<string> {
-  const hosts = new Set<string>();
-  for (const brand of BRANDS) {
-    for (const source of brand.sources) {
-      try {
-        const host = new URL(source.sitemap).hostname.toLowerCase();
-        hosts.add(host);
-        hosts.add(host.replace(/^www\./, ""));
-        if (!host.startsWith("www.")) hosts.add(`www.${host}`);
-      } catch {
-        // A malformed sitemap URL just means that brand contributes no host.
-      }
-    }
-  }
-  return hosts;
-}
 
 function extractImage(html: string, pageUrl: string): string | null {
   // og:image first, then twitter:image. Attribute order varies between the two
@@ -79,7 +61,7 @@ export async function GET(request: NextRequest) {
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
     return NextResponse.json({ error: "unsupported protocol" }, { status: 400 });
   }
-  if (!allowedHosts().has(parsed.hostname.toLowerCase())) {
+  if (!isAllowedHost(parsed.hostname)) {
     return NextResponse.json(
       { error: `${parsed.hostname} is not one of the brand sites` },
       { status: 403 },
