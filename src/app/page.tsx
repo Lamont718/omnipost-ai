@@ -1,12 +1,9 @@
 import Link from "next/link";
+import { activeBrands } from "@/lib/brands";
 
-const ORGS = [
-  { name: "WWSH", desc: "Youth development nonprofit", color: "bg-purple-500" },
-  { name: "BeyondChess", desc: "Chess-based education", color: "bg-teal-500" },
-  { name: "Our Rose LLC", desc: "Government contracting", color: "bg-amber-500" },
-  { name: "Adaptive Basketball", desc: "Inclusive youth sports", color: "bg-orange-500" },
-  { name: "MostHatedNBA", desc: "NBA culture & commentary", color: "bg-red-500" },
-];
+// The brands actually on the calendar — read from lib/brands.ts so this list
+// can never drift from what the app really posts for.
+const ORGS = activeBrands();
 
 const FEATURES = [
   {
@@ -109,13 +106,16 @@ export default function HomePage() {
         <div className="flex flex-wrap items-center justify-center gap-3">
           {ORGS.map((org) => (
             <div
-              key={org.name}
+              key={org.slug}
               className="flex items-center gap-2.5 bg-gray-50 border border-gray-100 rounded-full px-4 py-2.5"
             >
-              <div className={`w-2.5 h-2.5 rounded-full ${org.color}`} />
+              <div
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: org.colorHex }}
+              />
               <div>
                 <p className="text-sm font-medium text-gray-900">{org.name}</p>
-                <p className="text-[11px] text-gray-400">{org.desc}</p>
+                <p className="text-[11px] text-gray-400">{org.tagline}</p>
               </div>
             </div>
           ))}

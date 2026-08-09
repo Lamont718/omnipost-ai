@@ -35,6 +35,11 @@ export interface Brand {
   slug: string;
   name: string;
   colorHex: string;
+  /**
+   * One line, shown on the landing page. Required so a brand can't be added
+   * here and then quietly go missing from the public list.
+   */
+  tagline: string;
   /** Included in the calendar. */
   active: boolean;
   /**
@@ -65,6 +70,7 @@ export const BRANDS: Brand[] = [
     slug: "yodm",
     name: "YODM",
     colorHex: "#7C3AED",
+    tagline: "Party debate card game",
     active: true,
     schedule: [
       { day: 2, time: "18:00", platform: "instagram" },
@@ -117,6 +123,7 @@ export const BRANDS: Brand[] = [
     slug: "emeka-explores",
     name: "Emeka Explores",
     colorHex: "#7C3AED",
+    tagline: "Kids' learning site — 130+ lessons",
     active: true,
     schedule: [
       { day: 1, time: "09:00", platform: "instagram" },
@@ -169,6 +176,7 @@ export const BRANDS: Brand[] = [
     slug: "mosthated",
     name: "MostHatedNBA",
     colorHex: "#DC2626",
+    tagline: "NBA culture & commentary",
     active: true,
     schedule: [
       { day: 1, time: "20:00", platform: "x" },
@@ -210,6 +218,7 @@ export const BRANDS: Brand[] = [
     slug: "wwsh",
     name: "WWSH",
     colorHex: "#534AB7",
+    tagline: "Youth development nonprofit",
     active: true,
     schedule: [
       { day: 2, time: "17:00", platform: "facebook" },
@@ -255,6 +264,7 @@ export const BRANDS: Brand[] = [
     slug: "the-conductor",
     name: "The Conductor",
     colorHex: "#0EA5E9",
+    tagline: "NYC subway & bus history",
     active: true,
     schedule: [{ day: 3, time: "08:00", platform: "x" }],
     voice: {
@@ -297,6 +307,7 @@ export const BRANDS: Brand[] = [
     slug: "beyondchess",
     name: "BeyondChess",
     colorHex: "#0D9488",
+    tagline: "Chess-based education",
     active: false,
     schedule: [{ day: 3, time: "16:00", platform: "facebook" }],
     voice: {
@@ -336,6 +347,7 @@ export const BRANDS: Brand[] = [
     slug: "adaptive-basketball",
     name: "Adaptive Basketball Program",
     colorHex: "#EA580C",
+    tagline: "Inclusive youth sports",
     active: false,
     schedule: [{ day: 5, time: "17:00", platform: "facebook" }],
     voice: {
@@ -370,6 +382,7 @@ export const BRANDS: Brand[] = [
     slug: "iris-and-sage",
     name: "Iris & Sage",
     colorHex: "#4338CA",
+    tagline: "Children's book series (pre-launch)",
     active: true,
     schedule: [
       { day: 1, time: "10:00", platform: "instagram" },
@@ -451,6 +464,7 @@ export const BRANDS: Brand[] = [
     slug: "emeka-ignites",
     name: "Emeka Ignites",
     colorHex: "#F59E0B",
+    tagline: "Chapter-book series (pre-launch)",
     active: true,
     schedule: [
       { day: 2, time: "10:00", platform: "instagram" },
@@ -521,6 +535,7 @@ export const BRANDS: Brand[] = [
     slug: "ourrose",
     name: "Our Rose LLC",
     colorHex: "#D97706",
+    tagline: "Government contracting",
     active: false,
     schedule: [{ day: 2, time: "09:00", platform: "linkedin" }],
     voice: {
