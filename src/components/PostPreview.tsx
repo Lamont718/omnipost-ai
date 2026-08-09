@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Platform } from "@/lib/types";
 
 /**
@@ -182,8 +183,55 @@ function Card({ children, maxWidth = 400 }: { children: React.ReactNode; maxWidt
   );
 }
 
-/** Stands in for artwork. Says so, rather than pretending an image exists. */
+/**
+ * The share image the topic's own page publishes, or null while loading / if
+ * the page has none. This is the real artwork a follower would see — no image
+ * is generated here.
+ */
+function useTopicImage(url?: string): string | null {
+  const [image, setImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!url) {
+      setImage(null);
+      return;
+    }
+    let live = true;
+    fetch(`/api/og-image?url=${encodeURIComponent(url)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (live) setImage(d.image ?? null);
+      })
+      .catch(() => {
+        if (live) setImage(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [url]);
+
+  return image;
+}
+
+/** The post's artwork — the page's real share image, or a labelled stand-in. */
 function MediaSlot({ brand, topic }: { brand: PreviewBrand; topic: PreviewTopic }) {
+  const image = useTopicImage(topic.url);
+
+  if (image) {
+    return (
+      <div style={{ aspectRatio: "1 / 1", background: "#000" }}>
+        {/* Plain <img>: these are arbitrary brand-site hosts, and next/image
+            would need every one of them declared in next.config. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={image}
+          alt={topic.title}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -213,7 +261,7 @@ function MediaSlot({ brand, topic }: { brand: PreviewBrand; topic: PreviewTopic 
           padding: "3px 10px",
         }}
       >
-        No image attached
+        {topic.url ? "No share image on this page" : "No image attached"}
       </div>
     </div>
   );
@@ -221,10 +269,21 @@ function MediaSlot({ brand, topic }: { brand: PreviewBrand; topic: PreviewTopic 
 
 function LinkCard({ topic, tall = false }: { topic: PreviewTopic; tall?: boolean }) {
   const domain = domainOf(topic.url);
+  const image = useTopicImage(tall ? topic.url : undefined);
   if (!domain) return null;
   return (
     <div style={{ border: "1px solid #dadde1", borderTop: "none", background: "#f7f8fa" }}>
-      {tall && <div style={{ height: 96, background: "#e4e6eb" }} />}
+      {tall &&
+        (image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt=""
+            style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
+          />
+        ) : (
+          <div style={{ height: 96, background: "#e4e6eb" }} />
+        ))}
       <div style={{ padding: "10px 12px" }}>
         <div style={{ fontSize: 11, color: "#65676b", textTransform: "uppercase", letterSpacing: 0.3 }}>
           {domain}
@@ -340,7 +399,8 @@ function XPost({ brand, topic, caption, when }: ShellProps) {
           </div>
         </div>
       </div>
-      {topic.url && <LinkCard topic={topic} />}
+      {/* X renders a large summary card, image included, when the page has one. */}
+      {topic.url && <LinkCard topic={topic} tall />}
     </Card>
   );
 }
