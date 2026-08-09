@@ -94,6 +94,16 @@ export default function CalendarPage() {
     load();
   }, [load]);
 
+  // ?post=<slot id> opens that post straight away, so a single post can be
+  // linked to instead of described ("open the calendar, find Tuesday…").
+  useEffect(() => {
+    if (selected || posts.length === 0) return;
+    const want = new URLSearchParams(window.location.search).get("post");
+    if (!want) return;
+    const hit = posts.find((p) => p.id === want);
+    if (hit) setSelected(hit);
+  }, [posts, selected]);
+
   function captionFor(p: SlotPost): string | null {
     return localCaptions[p.id] ?? p.caption;
   }
