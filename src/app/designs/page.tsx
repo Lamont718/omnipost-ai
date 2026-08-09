@@ -145,8 +145,11 @@ export default function DesignsPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-            gap: 24,
+            // 265px is the widest min that still fits all four platforms side
+            // by side at the 1200px max width — at 320 the fourth wrapped onto
+            // its own row and left half the page empty.
+            gridTemplateColumns: "repeat(auto-fit, minmax(265px, 1fr))",
+            gap: 20,
             alignItems: "start",
           }}
         >
