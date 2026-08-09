@@ -538,7 +538,14 @@ function FacebookPost({ brand, topic, caption, when }: ShellProps) {
         <RichText text={caption} linkColor={LI_BLUE} />
       </div>
 
-      <LinkCard topic={topic} tall />
+      {/* A post with a page behind it shows the link card, which carries the
+          page's own image. With no page there is no card, and without this the
+          post would go out as bare text — so the artwork stands in its place. */}
+      {topic.url ? (
+        <LinkCard topic={topic} tall />
+      ) : (
+        <MediaSlot brand={brand} topic={topic} caption={caption} />
+      )}
 
       <div
         style={{
@@ -594,7 +601,14 @@ function LinkedInPost({ brand, topic, caption, when }: ShellProps) {
         <RichText text={caption} linkColor={LI_BLUE} />
       </div>
 
-      <LinkCard topic={topic} tall />
+      {/* A post with a page behind it shows the link card, which carries the
+          page's own image. With no page there is no card, and without this the
+          post would go out as bare text — so the artwork stands in its place. */}
+      {topic.url ? (
+        <LinkCard topic={topic} tall />
+      ) : (
+        <MediaSlot brand={brand} topic={topic} caption={caption} />
+      )}
 
       <div
         style={{
