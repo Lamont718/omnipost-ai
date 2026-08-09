@@ -216,18 +216,50 @@ function useTopicImage(url?: string): string | null {
 /** The post's artwork — the page's real share image, or a labelled stand-in. */
 function MediaSlot({ brand, topic }: { brand: PreviewBrand; topic: PreviewTopic }) {
   const image = useTopicImage(topic.url);
+  /** Width ÷ height of the loaded artwork, once the browser knows it. */
+  const [ratio, setRatio] = useState<number | null>(null);
 
   if (image) {
+    // These are 1.91:1 share cards; an Instagram post is square. Letterbox
+    // rather than crop — a preview that silently cuts half the artwork away is
+    // worse than useless, because the crop is the thing worth knowing about.
+    const landscape = ratio !== null && Math.abs(ratio - 1) > 0.25;
     return (
-      <div style={{ aspectRatio: "1 / 1", background: "#000" }}>
-        {/* Plain <img>: these are arbitrary brand-site hosts, and next/image
-            would need every one of them declared in next.config. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={image}
-          alt={topic.title}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        />
+      <div>
+        <div
+          style={{
+            aspectRatio: "1 / 1",
+            background: `linear-gradient(140deg, ${brand.colorHex}, ${brand.colorHex}cc)`,
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          {/* Plain <img>: these are arbitrary brand-site hosts, and next/image
+              would need every one of them declared in next.config. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={image}
+            alt={topic.title}
+            onLoad={(e) => {
+              const el = e.currentTarget;
+              if (el.naturalHeight > 0) setRatio(el.naturalWidth / el.naturalHeight);
+            }}
+            style={{ width: "100%", objectFit: "contain", display: "block" }}
+          />
+        </div>
+        {landscape && (
+          <div
+            style={{
+              fontSize: 10.5,
+              color: "#8e8e8e",
+              padding: "6px 12px 0",
+              lineHeight: 1.4,
+            }}
+          >
+            Wide share image ({ratio!.toFixed(2)}:1) in a square post — it will letterbox
+            like this, or crop. Square or 4:5 artwork fits properly.
+          </div>
+        )}
       </div>
     );
   }
