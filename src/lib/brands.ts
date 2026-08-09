@@ -71,7 +71,17 @@ export const BRANDS: Brand[] = [
     name: "YODM",
     colorHex: "#7C3AED",
     tagline: "Party debate card game",
-    active: true,
+    // Off since 2026-08-09: The Shop (repos/the-shop) owns YODM now. It writes
+    // from the 92-card deck itself rather than from the sitemap, so every post
+    // is a real card with a finished 1200x630 image yodm.com already renders,
+    // and a separate Critic agent rejects drafts before they reach the queue.
+    // Two systems captioning one account meant duplicate spend and competing
+    // posts, so this one stands down.
+    //
+    // The voice profile and schedule stay exactly as tuned, and the seven
+    // captions already generated remain in Blob storage under their slot ids.
+    // Set this back to true to bring it all back.
+    active: false,
     schedule: [
       { day: 2, time: "18:00", platform: "instagram" },
       { day: 4, time: "19:00", platform: "facebook" },
