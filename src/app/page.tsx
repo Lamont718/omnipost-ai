@@ -73,7 +73,9 @@ export default function HomePage() {
 
         <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight leading-tight max-w-4xl mx-auto">
           One platform.{" "}
-          <span className="text-brand-500">Five organizations.</span>{" "}
+          <span className="text-brand-500">
+            {ORGS.length} organization{ORGS.length === 1 ? "" : "s"}.
+          </span>{" "}
           Authentic content at scale.
         </h2>
 
@@ -89,12 +91,12 @@ export default function HomePage() {
           >
             Get Started
           </Link>
-          <a
-            href="#features"
-            className="text-gray-600 hover:text-gray-900 font-medium px-8 py-3 rounded-lg text-sm transition"
+          <Link
+            href="/designs"
+            className="border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium px-8 py-3 rounded-lg text-sm transition"
           >
-            See Features
-          </a>
+            See what the posts look like
+          </Link>
         </div>
       </section>
 

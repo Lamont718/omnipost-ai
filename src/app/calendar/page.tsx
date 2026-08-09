@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import {
   startOfMonth,
   endOfMonth,
@@ -13,6 +14,12 @@ import {
   addMonths,
   subMonths,
 } from "date-fns";
+import {
+  PostPreview,
+  EmptyPreview,
+  PLATFORM_NAME,
+  PLATFORM_LIMIT,
+} from "@/components/PostPreview";
 
 /** Shape returned by /api/schedule. */
 interface SlotPost {
@@ -31,6 +38,8 @@ const PLATFORM_LABEL: Record<SlotPost["platform"], string> = {
   linkedin: "LI",
   x: "X",
 };
+
+const PLATFORMS: SlotPost["platform"][] = ["instagram", "facebook", "linkedin", "x"];
 
 /** Locally-written captions + "posted" flags, so the tool needs no login. */
 const LS_CAPTIONS = "omnipost.captions";
@@ -124,6 +133,22 @@ export default function CalendarPage() {
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Link
+              href="/designs"
+              style={{
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: "#374151",
+                textDecoration: "none",
+                border: "1px solid #e5e7eb",
+                background: "#fff",
+                borderRadius: 8,
+                padding: "7px 12px",
+                marginRight: 4,
+              }}
+            >
+              See the designs
+            </Link>
             <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} style={navBtn}>
               ‹
             </button>
@@ -269,6 +294,8 @@ function PostDetail({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Which platform's design is on screen — starts on the slot's own. */
+  const [view, setView] = useState<SlotPost["platform"]>(post.platform);
 
   async function generate() {
     setBusy(true);
@@ -329,27 +356,63 @@ function PostDetail({
           </a>
         )}
 
-        <div style={{ fontSize: 13, color: "#374151", margin: "16px 0 6px", fontWeight: 600 }}>
-          Post
-        </div>
-        {caption ? (
-          <div
-            style={{
-              whiteSpace: "pre-wrap",
-              fontSize: 14,
-              lineHeight: 1.6,
-              color: "#111827",
-              background: "#f8fafc",
-              border: "1px dashed #d1d5db",
-              borderRadius: 8,
-              padding: 12,
-            }}
-          >
-            {caption}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            margin: "16px 0 8px",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>
+            {view === post.platform
+              ? `As it will look on ${PLATFORM_NAME[view]}`
+              : `Same copy, on ${PLATFORM_NAME[view]}`}
           </div>
-        ) : (
-          <div style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>
-            Not written yet.
+          {/* Its own platform first, then the others — the copy is written for
+              one platform, but seeing it in the others catches length problems. */}
+          <div style={{ display: "flex", gap: 4 }}>
+            {PLATFORMS.map((pf) => (
+              <button
+                key={pf}
+                onClick={() => setView(pf)}
+                style={{
+                  border: "1px solid " + (view === pf ? "#111827" : "#e5e7eb"),
+                  background: view === pf ? "#111827" : "#fff",
+                  color: view === pf ? "#fff" : "#6b7280",
+                  borderRadius: 6,
+                  padding: "4px 8px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {PLATFORM_LABEL[pf]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "center", padding: "4px 0 8px" }}>
+          {caption ? (
+            <PostPreview
+              platform={view}
+              brand={post.brand}
+              topic={post.topic}
+              caption={caption}
+              when={format(new Date(post.date + "T00:00"), "MMM d")}
+            />
+          ) : (
+            <EmptyPreview platform={view} brand={post.brand} />
+          )}
+        </div>
+
+        {caption && (
+          <div style={{ fontSize: 11.5, color: "#9ca3af", textAlign: "center" }}>
+            {caption.length} characters · {PLATFORM_NAME[view]} allows{" "}
+            {PLATFORM_LIMIT[view].toLocaleString()}
           </div>
         )}
 
