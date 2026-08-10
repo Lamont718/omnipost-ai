@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { scheduledPostsInRange } from "@/lib/schedule";
+import { scheduledPostsInRange, withPinnedTopics } from "@/lib/schedule";
 import { readCaptions } from "@/lib/store";
 import { brandBySlug } from "@/lib/brands";
 import { shareImageFor, mapWithConcurrency } from "@/lib/share-image";
@@ -51,10 +51,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [scheduled, captions] = await Promise.all([
+    const [derived, captions] = await Promise.all([
       scheduledPostsInRange(range.start, range.end),
       readCaptions(),
     ]);
+
+    // Pin before anything else reads a topic: the row's image and alt text have
+    // to describe the caption sitting next to them, not a re-derived page.
+    const scheduled = withPinnedTopics(derived, captions);
 
     const eligible = scheduled.filter(
       (p) =>

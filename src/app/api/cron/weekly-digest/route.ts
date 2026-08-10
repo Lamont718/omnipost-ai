@@ -22,6 +22,13 @@ export const maxDuration = 300;
  *   One brand only:      …&brand=yodm
  *   N days ahead:        …&days=14
  *
+ * Each caption is saved with the topic it was written from, and the calendar
+ * shows that stored topic rather than re-deriving one. So this run is also the
+ * only way a slot that's already written can move onto a new topic: `&force=1`
+ * regenerates from current discovery and re-pins. Everything else — the
+ * calendar's Rewrite button included — rerolls the wording and keeps the
+ * subject.
+ *
  * Requires BLOB_READ_WRITE_TOKEN to persist. Without it, generation still runs
  * and preview works, but nothing is saved (the calendar then generates on
  * demand instead).
@@ -82,7 +89,14 @@ export async function GET(request: Request) {
             topic: { title: slot.topic.title, context: slot.topic.context },
             platform: slot.platform,
           });
-          captions[slot.id] = { ...post, generatedAt: new Date().toISOString() };
+          // Store the topic with the caption, not just the caption. Topics are
+          // re-derived on every read, so without this the pairing is guesswork
+          // the next time a sitemap or a source rule changes.
+          captions[slot.id] = {
+            ...post,
+            generatedAt: new Date().toISOString(),
+            topic: slot.topic,
+          };
         } catch (err) {
           failures.push(`${slot.brandSlug} ${slot.date}: ${err instanceof Error ? err.message : err}`);
         }

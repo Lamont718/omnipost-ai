@@ -1,6 +1,7 @@
 import { Platform, PostSlot, Weekday } from "./types";
 import { activeBrands, Brand } from "./brands";
 import { topicsForBrand, Topic, weekIndex } from "./sources";
+import type { CaptionMap } from "./store";
 
 export type { PostSlot, Weekday } from "./types";
 
@@ -104,6 +105,32 @@ async function brandPostsInRange(
   }
 
   return out;
+}
+
+/**
+ * Replace each post's freshly-derived topic with the one its caption was
+ * actually written from, where there is one.
+ *
+ * Discovery is a moving target: sitemaps grow, `lastmod` dates shift, and any
+ * edit to a brand's `sources` re-shuffles which page lands in which slot. A
+ * written caption must not move with it — the words are about one specific
+ * thing, and the label, the link and the picture all have to keep pointing at
+ * that thing. So a caption's own topic wins, and rotation only governs slots
+ * nobody has written yet.
+ *
+ * Every reader of the store goes through here — the calendar, the showroom and
+ * the Metricool export — so none of them can disagree about what a post is
+ * about. Captions written before topics were pinned have none, and keep the
+ * derived one.
+ */
+export function withPinnedTopics(
+  posts: ScheduledPost[],
+  captions: CaptionMap,
+): ScheduledPost[] {
+  return posts.map((post) => {
+    const pinned = captions[post.id]?.topic;
+    return pinned ? { ...post, topic: pinned } : post;
+  });
 }
 
 /** Every active brand's scheduled posts across a date range, brands in parallel. */

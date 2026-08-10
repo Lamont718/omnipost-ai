@@ -1,4 +1,5 @@
 import { GenerateResponse } from "./types";
+import type { Topic } from "./sources";
 
 /**
  * Where written captions live between generation and the calendar that shows them.
@@ -34,6 +35,27 @@ import { GenerateResponse } from "./types";
 export interface StoredCaption extends GenerateResponse {
   /** ISO timestamp of when it was written. */
   generatedAt: string;
+  /**
+   * The topic this caption was actually written from, frozen at the moment it
+   * was written.
+   *
+   * Captions are stored by slot id — brand, date, time, platform — but topics
+   * are re-derived from the live sitemap on every read. So the pairing between
+   * a caption and its subject was never stored anywhere: change a brand's
+   * sources, or let a site add a page, and yesterday's caption gets re-paired
+   * with today's topic. The caption still talks about a YODM card while the
+   * calendar labels it something else, links somewhere else, and picks its
+   * picture from the wrong page. It happened three times in one session and
+   * cost about forty regenerated captions.
+   *
+   * Writing the topic down alongside the caption fixes it, because the caption
+   * is the truth and the topic is only how it was derived. Readers use this in
+   * preference to whatever discovery returns now — see `withPinnedTopics`.
+   *
+   * Optional because captions written before this existed don't have one; they
+   * fall back to the derived topic, exactly as before.
+   */
+  topic?: Topic;
 }
 
 export type CaptionMap = Record<string, StoredCaption>;

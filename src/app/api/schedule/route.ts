@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { scheduledPostsInRange } from "@/lib/schedule";
+import { scheduledPostsInRange, withPinnedTopics } from "@/lib/schedule";
 import { readCaptions } from "@/lib/store";
 import { libraryFor, pickForSlot } from "@/lib/library";
 
@@ -49,10 +49,14 @@ export async function GET(request: NextRequest) {
   end.setDate(last.getDate() + (6 - last.getDay()));
 
   try {
-    const [posts, captions] = await Promise.all([
+    const [derived, captions] = await Promise.all([
       scheduledPostsInRange(start, end),
       readCaptions(),
     ]);
+
+    // A written post keeps the topic it was written from, so its label, link
+    // and picture can't drift onto whatever discovery returns today.
+    const posts = withPinnedTopics(derived, captions);
 
     // One lookup per brand on screen, not one per post.
     const slugs = Array.from(new Set(posts.map((p) => p.brandSlug)));

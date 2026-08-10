@@ -18,7 +18,13 @@ const PLATFORMS: Platform[] = ["instagram", "facebook", "linkedin", "x"];
  *
  *   POST /api/slot
  *   { "id": "...", "brand": "yodm", "platform": "x",
- *     "topic": { "title": "...", "context": "..."? }, "tone_override"?: "..." }
+ *     "topic": { "title": "...", "context"?, "url"?, "source"? },
+ *     "tone_override"?: "..." }
+ *
+ * The whole topic is stored with the caption, url included, so the calendar can
+ * keep showing this exact subject however discovery shifts afterwards. That is
+ * why the caller should send back the full topic object it was given and not
+ * just the title.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -50,7 +56,18 @@ export async function POST(request: NextRequest) {
     // Timestamps can't come from the runtime clock inside some contexts, but a
     // plain new Date() is fine in a request handler.
     const stored = await writeCaptions({
-      [id]: { ...post, generatedAt: new Date().toISOString() },
+      [id]: {
+        ...post,
+        generatedAt: new Date().toISOString(),
+        topic: {
+          title: topic.title,
+          context: topic.context,
+          url: topic.url,
+          // Older callers don't send it; a topic with a page behind it is a
+          // site topic by definition, and one without is evergreen.
+          source: topic.source === "evergreen" || !topic.url ? "evergreen" : "site",
+        },
+      },
     });
 
     return NextResponse.json({ ...post, persisted: stored > 0 });

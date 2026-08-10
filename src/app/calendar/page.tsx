@@ -447,7 +447,10 @@ function PostDetail({
           id: post.id,
           brand: post.brand.slug,
           platform: post.platform,
-          topic: { title: post.topic.title, context: post.topic.context },
+          // The whole topic, not just the title: it gets stored with the
+          // caption so this slot keeps showing this subject even after the
+          // sitemap moves on.
+          topic: post.topic,
         }),
       });
       const data = await res.json();
