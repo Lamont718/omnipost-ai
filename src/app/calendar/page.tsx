@@ -122,7 +122,9 @@ export default function CalendarPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
-      <div style={{ padding: "24px", maxWidth: 1100, margin: "0 auto" }}>
+      {/* Wide on purpose: six brands means up to five posts stacked in one day
+          cell, and at 1100px the brand names were wrapping. */}
+      <div style={{ padding: "24px clamp(16px, 3vw, 40px)", maxWidth: 1700, margin: "0 auto" }}>
         {/* Header */}
         <div
           style={{
@@ -193,7 +195,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Month grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
           {days.map((day) => {
             const dayPosts = postsForDay(day);
             const inMonth = isSameMonth(day, currentMonth);
@@ -202,20 +204,20 @@ export default function CalendarPage() {
               <div
                 key={day.toISOString()}
                 style={{
-                  minHeight: 96,
+                  minHeight: 124,
                   border: "1px solid #eef0f2",
                   borderRadius: 8,
-                  padding: 6,
+                  padding: 8,
                   background: inMonth ? "#fff" : "#fafafa",
                   opacity: inMonth ? 1 : 0.6,
                 }}
               >
                 <div
                   style={{
-                    fontSize: 11,
+                    fontSize: 12.5,
                     fontWeight: today ? 700 : 500,
                     color: today ? "#2563eb" : "#6b7280",
-                    marginBottom: 4,
+                    marginBottom: 5,
                   }}
                 >
                   {format(day, "d")}
@@ -235,12 +237,12 @@ export default function CalendarPage() {
                         border: "none",
                         borderLeft: `3px solid ${p.brand.colorHex}`,
                         background: isPosted ? "#f0fdf4" : written ? "#f8fafc" : "#fff",
-                        borderRadius: 4,
-                        padding: "3px 5px",
-                        marginBottom: 3,
+                        borderRadius: 5,
+                        padding: "4px 7px",
+                        marginBottom: 4,
                         cursor: "pointer",
-                        fontSize: 10.5,
-                        lineHeight: 1.3,
+                        fontSize: 11.5,
+                        lineHeight: 1.35,
                       }}
                     >
                       <span style={{ color: "#374151", fontWeight: 600 }}>
@@ -249,11 +251,19 @@ export default function CalendarPage() {
                       <span style={{ color: "#9ca3af" }}>
                         {PLATFORM_LABEL[p.platform]}
                       </span>
-                      <br />
-                      <span style={{ color: p.brand.colorHex, fontWeight: 600 }}>
-                        {p.brand.name}
-                      </span>{" "}
-                      {isPosted ? "✓" : written ? "" : "·"}
+                      {/* Ellipsis rather than wrap — "Heart of the Block" would
+                          otherwise push a cell to three lines. */}
+                      <div
+                        style={{
+                          color: p.brand.colorHex,
+                          fontWeight: 600,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {p.brand.name} {isPosted ? "✓" : written ? "" : "·"}
+                      </div>
                     </button>
                   );
                 })}
