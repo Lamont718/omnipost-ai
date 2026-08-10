@@ -111,9 +111,23 @@ export const BRANDS: Brand[] = [
       ],
       example_posts: [],
     },
+    // Post the actual cards, not the marketing pages.
+    //
+    // yodm.com publishes all 92 cards at /card/<n>, and each one already gives
+    // us everything a post needs: the page <title> IS the real question, the
+    // description carries the category, and the share image is the finished
+    // card graphic the site renders — red border, category strip, YODM.COM
+    // footer. So a YODM post ends up being a real card, with the real card
+    // image, and no part of it is invented. That matters more here than
+    // anywhere else: an earlier version of this app made up the seven category
+    // names because it was writing from a marketing page with nothing concrete
+    // on it.
+    //
+    // 92 cards also means a topic never repeats within a month.
     sources: [
       {
         sitemap: "https://yodm.com/sitemap.xml",
+        include: [/\/card\/\d+$/i],
         exclude: BOILERPLATE,
       },
     ],
