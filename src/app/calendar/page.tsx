@@ -31,6 +31,8 @@ interface SlotPost {
   brand: { slug: string; name: string; colorHex: string };
   topic: { title: string; context?: string; url?: string; source: string };
   caption: string | null;
+  /** The brand's own artwork for this slot, when it has a library. */
+  image?: string | null;
 }
 
 const PLATFORM_LABEL: Record<SlotPost["platform"], string> = {
@@ -573,6 +575,7 @@ function PostDetail({
               topic={post.topic}
               caption={caption}
               when={format(new Date(post.date + "T00:00"), "MMM d")}
+              imageUrl={post.image}
             />
           ) : (
             <EmptyPreview platform={view} brand={post.brand} />

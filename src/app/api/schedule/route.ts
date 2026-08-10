@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { scheduledPostsInRange } from "@/lib/schedule";
 import { readCaptions } from "@/lib/store";
+import { libraryFor, pickForSlot } from "@/lib/library";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,6 +48,14 @@ export async function GET(request: NextRequest) {
       readCaptions(),
     ]);
 
+    // One lookup per brand on screen, not one per post.
+    const slugs = Array.from(new Set(posts.map((p) => p.brandSlug)));
+    const libraries = new Map(
+      await Promise.all(
+        slugs.map(async (slug) => [slug, await libraryFor(slug)] as const),
+      ),
+    );
+
     return NextResponse.json({
       month: monthParam,
       posts: posts.map((p) => ({
@@ -57,6 +66,9 @@ export async function GET(request: NextRequest) {
         brand: { slug: p.brandSlug, name: p.brandName, colorHex: p.colorHex },
         topic: p.topic,
         caption: captions[p.id]?.caption ?? null,
+        // The brand's own artwork, when it has any. Beats the page's share
+        // image — see the note in lib/library.ts.
+        image: pickForSlot(libraries.get(p.brandSlug) ?? [], p.id)?.url ?? null,
       })),
     });
   } catch (error) {

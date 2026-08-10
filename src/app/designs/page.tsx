@@ -30,6 +30,7 @@ interface SlotPost {
   brand: { slug: string; name: string; colorHex: string };
   topic: { title: string; context?: string; url?: string; source: string };
   caption: string | null;
+  image?: string | null;
 }
 
 const PLATFORMS: Platform[] = ["instagram", "facebook", "linkedin", "x"];
@@ -186,6 +187,7 @@ export default function DesignsPage() {
                       topic={slot.topic}
                       caption={slot.caption}
                       when={format(new Date(slot.date + "T00:00"), "MMM d")}
+                      imageUrl={slot.image}
                     />
                   ) : (
                     <EmptyPreview platform={pf} brand={brand} />

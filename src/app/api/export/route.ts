@@ -3,6 +3,7 @@ import { scheduledPostsInRange } from "@/lib/schedule";
 import { readCaptions } from "@/lib/store";
 import { brandBySlug } from "@/lib/brands";
 import { shareImageFor, mapWithConcurrency } from "@/lib/share-image";
+import { libraryFor, pickForSlot } from "@/lib/library";
 import { generatedImageUrl, hookLine } from "@/lib/post-image-url";
 import { toMetricoolCsv, ExportPost, RECOMMENDED_MAX_ROWS } from "@/lib/metricool";
 
@@ -70,9 +71,17 @@ export async function GET(request: NextRequest) {
     const found = await mapWithConcurrency(pages, 8, shareImageFor);
     const imageByPage = new Map(pages.map((url, i) => [url, found[i]]));
 
+    // Brand artwork, where a brand has a library. Same order of preference the
+    // previews use, so the picture he approved on screen is the one that posts.
+    const slugs = Array.from(new Set(eligible.map((p) => p.brandSlug)));
+    const libraries = new Map(
+      await Promise.all(slugs.map(async (s) => [s, await libraryFor(s)] as const)),
+    );
+
     const origin = new URL(request.url).origin;
     const rows: ExportPost[] = eligible.map((p) => {
       const caption = captions[p.id].caption;
+      const fromLibrary = pickForSlot(libraries.get(p.brandSlug) ?? [], p.id);
       const shareImage = p.topic.url ? imageByPage.get(p.topic.url) : null;
       // Same fallback the previews use, but absolute — Metricool fetches these
       // from its own servers, so a root-relative path would be meaningless.
@@ -82,8 +91,12 @@ export async function GET(request: NextRequest) {
         date: p.date,
         time: p.time,
         platform: p.platform,
-        imageUrl: shareImage ?? generated,
-        imageAlt: shareImage ? p.topic.title : hookLine(caption),
+        imageUrl: fromLibrary?.url ?? shareImage ?? generated,
+        imageAlt: fromLibrary
+          ? p.topic.title
+          : shareImage
+            ? p.topic.title
+            : hookLine(caption),
         brandName,
       };
     });

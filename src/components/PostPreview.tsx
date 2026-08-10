@@ -195,12 +195,14 @@ function Card({ children, maxWidth = 400 }: { children: React.ReactNode; maxWidt
 function useTopicImage(
   url: string | undefined,
   fallback: string | null,
+  /** The brand's own artwork. Wins outright — no lookup, no fallback. */
+  override?: string | null,
 ): { src: string | null; generated: boolean } {
   const [image, setImage] = useState<string | null>(null);
   const [settled, setSettled] = useState(false);
 
   useEffect(() => {
-    if (!url) {
+    if (override || !url) {
       setImage(null);
       setSettled(true);
       return;
@@ -222,8 +224,9 @@ function useTopicImage(
     return () => {
       live = false;
     };
-  }, [url]);
+  }, [url, override]);
 
+  if (override) return { src: override, generated: false };
   if (image) return { src: image, generated: false };
   if (settled && fallback) return { src: fallback, generated: true };
   return { src: null, generated: false };
@@ -234,14 +237,17 @@ function MediaSlot({
   brand,
   topic,
   caption,
+  imageUrl,
 }: {
   brand: PreviewBrand;
   topic: PreviewTopic;
   caption?: string;
+  imageUrl?: string | null;
 }) {
   const { src: image, generated } = useTopicImage(
     topic.url,
     caption ? generatedImageUrl(brand.slug, caption) : null,
+    imageUrl,
   );
   /** Width ÷ height of the loaded artwork, once the browser knows it. */
   const [ratio, setRatio] = useState<number | null>(null);
@@ -328,9 +334,17 @@ function MediaSlot({
   );
 }
 
-function LinkCard({ topic, tall = false }: { topic: PreviewTopic; tall?: boolean }) {
+function LinkCard({
+  topic,
+  tall = false,
+  imageUrl,
+}: {
+  topic: PreviewTopic;
+  tall?: boolean;
+  imageUrl?: string | null;
+}) {
   const domain = domainOf(topic.url);
-  const { src: image } = useTopicImage(tall ? topic.url : undefined, null);
+  const { src: image } = useTopicImage(tall ? topic.url : undefined, null, imageUrl);
   if (!domain) return null;
   return (
     <div style={{ border: "1px solid #dadde1", borderTop: "none", background: "#f7f8fa" }}>
@@ -364,9 +378,11 @@ interface ShellProps {
   topic: PreviewTopic;
   caption: string;
   when: string;
+  /** The brand's own artwork for this slot, when it has a library. */
+  imageUrl?: string | null;
 }
 
-function InstagramPost({ brand, topic, caption, when }: ShellProps) {
+function InstagramPost({ brand, topic, caption, when, imageUrl }: ShellProps) {
   return (
     <Card>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
@@ -377,7 +393,7 @@ function InstagramPost({ brand, topic, caption, when }: ShellProps) {
         <div style={{ color: "#262626", letterSpacing: 2, fontSize: 14 }}>•••</div>
       </div>
 
-      <MediaSlot brand={brand} topic={topic} caption={caption} />
+      <MediaSlot brand={brand} topic={topic} caption={caption} imageUrl={imageUrl} />
 
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 12px 6px", color: "#262626" }}>
         {ico(HEART)}
@@ -401,7 +417,7 @@ function InstagramPost({ brand, topic, caption, when }: ShellProps) {
   );
 }
 
-function XPost({ brand, topic, caption, when }: ShellProps) {
+function XPost({ brand, topic, caption, when, imageUrl }: ShellProps) {
   const over = caption.length > PLATFORM_LIMIT.x;
   return (
     <Card>
@@ -461,12 +477,12 @@ function XPost({ brand, topic, caption, when }: ShellProps) {
         </div>
       </div>
       {/* X renders a large summary card, image included, when the page has one. */}
-      {topic.url && <LinkCard topic={topic} tall />}
+      {topic.url && <LinkCard topic={topic} tall imageUrl={imageUrl} />}
     </Card>
   );
 }
 
-function FacebookPost({ brand, topic, caption, when }: ShellProps) {
+function FacebookPost({ brand, topic, caption, when, imageUrl }: ShellProps) {
   return (
     <Card maxWidth={420}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 12 }}>
@@ -499,9 +515,9 @@ function FacebookPost({ brand, topic, caption, when }: ShellProps) {
           page's own image. With no page there is no card, and without this the
           post would go out as bare text — so the artwork stands in its place. */}
       {topic.url ? (
-        <LinkCard topic={topic} tall />
+        <LinkCard topic={topic} tall imageUrl={imageUrl} />
       ) : (
-        <MediaSlot brand={brand} topic={topic} caption={caption} />
+        <MediaSlot brand={brand} topic={topic} caption={caption} imageUrl={imageUrl} />
       )}
 
       <div
@@ -526,7 +542,7 @@ function FacebookPost({ brand, topic, caption, when }: ShellProps) {
   );
 }
 
-function LinkedInPost({ brand, topic, caption, when }: ShellProps) {
+function LinkedInPost({ brand, topic, caption, when, imageUrl }: ShellProps) {
   return (
     <Card maxWidth={440}>
       <div style={{ display: "flex", gap: 10, padding: 12 }}>
@@ -562,9 +578,9 @@ function LinkedInPost({ brand, topic, caption, when }: ShellProps) {
           page's own image. With no page there is no card, and without this the
           post would go out as bare text — so the artwork stands in its place. */}
       {topic.url ? (
-        <LinkCard topic={topic} tall />
+        <LinkCard topic={topic} tall imageUrl={imageUrl} />
       ) : (
-        <MediaSlot brand={brand} topic={topic} caption={caption} />
+        <MediaSlot brand={brand} topic={topic} caption={caption} imageUrl={imageUrl} />
       )}
 
       <div
@@ -600,14 +616,16 @@ export function PostPreview({
   topic,
   caption,
   when = "now",
+  imageUrl,
 }: {
   platform: Platform;
   brand: PreviewBrand;
   topic: PreviewTopic;
   caption: string;
   when?: string;
+  imageUrl?: string | null;
 }) {
-  const props = { brand, topic, caption, when };
+  const props = { brand, topic, caption, when, imageUrl };
   switch (platform) {
     case "instagram":
       return <InstagramPost {...props} />;
