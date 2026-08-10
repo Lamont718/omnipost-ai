@@ -261,7 +261,16 @@ export const BRANDS: Brand[] = [
       ],
       example_posts: [],
     },
-    sources: [],
+    // WWSH posts from communitynyc.org — that is the nonprofit's public site.
+    // ⚠️ Point at the child sitemap, not /sitemap.xml: GoDaddy serves a
+    // <sitemapindex> there and parseSitemap only reads <url> entries, so the
+    // index yields nothing at all. sitemap.ols.xml is the online store.
+    sources: [
+      {
+        sitemap: "https://communitynyc.org/sitemap.website.xml",
+        exclude: BOILERPLATE.concat([/\/dycd-registration-form\b/i]),
+      },
+    ],
     evergreenTopics: [
       "Sunday basketball at 2670 Coyle St — what a session actually looks like",
       "What 16 years in the same neighborhood buys you that a grant cycle can't",
@@ -309,6 +318,74 @@ export const BRANDS: Brand[] = [
     evergreenTopics: [
       "Fifty-five station names repeat across the boroughs. Here's how The Conductor handles it.",
       "Checking whether a station has a working elevator before you leave the house",
+    ],
+  },
+  {
+    slug: "heart-of-the-block",
+    name: "Heart of the Block",
+    // The site's own theme-color, so the calendar dot matches the real brand.
+    colorHex: "#c23a22",
+    tagline: "Brooklyn heart health",
+    // ⚠️ There are no social accounts for this brand yet. Posts are being
+    // written ahead of the accounts existing, at Lamont's request — so treat
+    // the queue as a bank of drafts, not something anyone is waiting on.
+    active: true,
+    schedule: [
+      { day: 1, time: "18:00", platform: "instagram" },
+      { day: 4, time: "18:00", platform: "facebook" },
+    ],
+    voice: {
+      tone: "Warm, plain, neighbour-to-neighbour — never clinical, never scolding about food",
+      audience:
+        "Black and Caribbean adults in Brooklyn looking after their blood pressure, cholesterol and weight, and the family members who cook for them",
+      cultural_context:
+        "A Brooklyn heart-health platform: understand your numbers, make real food swaps, scan products in the store, and find genuinely healthy places to shop nearby. The lessons work with the food people actually cook — oxtail, rice and peas, fried chicken, greens — making them lighter rather than telling anyone to give them up. The site is published in English, Spanish and Haitian Creole.",
+      emoji_style: "minimal",
+      banned_words: [
+        // Diet-culture and shame language — the whole premise is the opposite.
+        "superfood",
+        "clean eating",
+        "guilt-free",
+        "cheat meal",
+        "obesity epidemic",
+        "bad foods",
+        "indulge",
+        "sinful",
+        // Nothing here may read as medical advice or a promise.
+        "cure",
+        "reverse your",
+        "doctor-approved",
+        "miracle",
+      ],
+      hashtags: [
+        "#HeartOfTheBlock",
+        "#BrooklynHealth",
+        "#HeartHealth",
+        "#KnowYourNumbers",
+      ],
+      keywords: [
+        "heart health",
+        "blood pressure",
+        "cholesterol",
+        "Brooklyn",
+        "food swaps",
+        "Caribbean cooking",
+      ],
+      example_posts: [],
+    },
+    sources: [
+      {
+        sitemap: "https://heartoftheblock.org/sitemap.xml",
+        // /scan, /tracker, /plans and /directory are app screens behind a
+        // login — the lessons and recipes are what's worth sending people to.
+        include: [/\/learn\b/i, /\/recipes\b/i, /\/abcs\b/i, /\/swaps\b/i, /\/get-screened\b/i, /\/healthy-buys\b/i, /\/money-for-produce\b/i, /\/heart-risk\b/i],
+        exclude: BOILERPLATE.concat([/\/disclaimer\b/i]),
+      },
+    ],
+    evergreenTopics: [
+      "Making oxtail lighter without making it something else",
+      "What the numbers on a blood-pressure reading actually mean",
+      "Reading a food label in the aisle, in under ten seconds",
     ],
   },
   {
@@ -391,7 +468,10 @@ export const BRANDS: Brand[] = [
     name: "Iris & Sage",
     colorHex: "#4338CA",
     tagline: "Children's book series (pre-launch)",
-    active: true,
+    // Off since 2026-08-09: posting only for brands with a live website, and
+    // the books don't have one yet. Turn back on when the print order is placed
+    // and there's somewhere for a post to send people.
+    active: false,
     schedule: [
       { day: 1, time: "10:00", platform: "instagram" },
       { day: 4, time: "20:00", platform: "facebook" },
@@ -473,7 +553,9 @@ export const BRANDS: Brand[] = [
     name: "Emeka Ignites",
     colorHex: "#F59E0B",
     tagline: "Chapter-book series (pre-launch)",
-    active: true,
+    // Off since 2026-08-09, same reason as Iris & Sage: no live site to post
+    // toward until the books are ordered.
+    active: false,
     schedule: [
       { day: 2, time: "10:00", platform: "instagram" },
       { day: 6, time: "09:00", platform: "facebook" },
