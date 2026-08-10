@@ -174,6 +174,12 @@ export default function CalendarPage() {
           </div>
         </div>
 
+        <MetricoolExport
+          month={format(currentMonth, "yyyy-MM")}
+          posts={posts}
+          captionFor={captionFor}
+        />
+
         {/* Weekday header */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
@@ -292,6 +298,116 @@ export default function CalendarPage() {
             }}
           />
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Hand-off to Metricool, which owns the actual account connections.
+ *
+ * One file per brand rather than one for everything: Metricool matches its
+ * "Brand name" column exactly, case included, and we don't know those names —
+ * left blank, an import lands in whichever brand is open, which is reliable.
+ * Only written posts are counted, and only ones still in the future, since
+ * scheduling into the past does nothing.
+ */
+function MetricoolExport({
+  month,
+  posts,
+  captionFor,
+}: {
+  month: string;
+  posts: SlotPost[];
+  captionFor: (p: SlotPost) => string | null;
+}) {
+  const [draft, setDraft] = useState(true);
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  const brands: { slug: string; name: string; colorHex: string; ready: number }[] = [];
+  for (const p of posts) {
+    if (p.date < today || !captionFor(p)) continue;
+    const hit = brands.find((b) => b.slug === p.brand.slug);
+    if (hit) hit.ready++;
+    else brands.push({ ...p.brand, ready: 1 });
+  }
+
+  if (brands.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        border: "1px solid #e5e7eb",
+        background: "#fff",
+        borderRadius: 10,
+        padding: "12px 14px",
+        margin: "14px 0 16px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>
+          Send to Metricool
+        </span>
+        <span style={{ fontSize: 12, color: "#6b7280" }}>
+          One CSV per brand, upcoming written posts only. In Metricool: open the brand →
+          Planning → Import CSV.
+        </span>
+        <label
+          style={{
+            marginLeft: "auto",
+            fontSize: 12,
+            color: "#374151",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            cursor: "pointer",
+          }}
+        >
+          <input type="checkbox" checked={draft} onChange={(e) => setDraft(e.target.checked)} />
+          Import as drafts
+        </label>
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+        {brands.map((b) => (
+          <a
+            key={b.slug}
+            href={`/api/export?month=${month}&brand=${b.slug}${draft ? "&draft=1" : ""}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              border: "1px solid #e5e7eb",
+              borderRadius: 999,
+              padding: "6px 12px",
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: "#374151",
+              textDecoration: "none",
+              background: "#fff",
+            }}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: b.colorHex,
+              }}
+            />
+            {b.name}
+            <span style={{ color: "#9ca3af", fontWeight: 500 }}>
+              {b.ready}
+              {b.ready > 50 ? " ⚠" : ""}
+            </span>
+          </a>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 8 }}>
+        Metricool recommends importing 50 posts at a time — a ⚠ means that file is over.
+        Every row carries a public image URL; leave &quot;Import as drafts&quot; on for the first
+        run so you can check them in Metricool before anything goes out.
       </div>
     </div>
   );

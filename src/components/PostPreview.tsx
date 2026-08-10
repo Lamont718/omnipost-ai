@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Platform } from "@/lib/types";
+import { generatedImageUrl, hookLine } from "@/lib/post-image-url";
+
+// Re-exported so existing callers keep importing them from here.
+export { generatedImageUrl, hookLine };
 
 /**
  * What a written post will actually look like on the platform it's going to.
@@ -181,53 +185,6 @@ function Card({ children, maxWidth = 400 }: { children: React.ReactNode; maxWidt
       {children}
     </div>
   );
-}
-
-/**
- * The opening line of a caption, for artwork that has to carry the post on its
- * own. Hashtags and trailing URLs are stripped — they belong in the caption, not
- * burned into a picture.
- */
-export function hookLine(caption: string): string {
-  const body = caption
-    .replace(/https?:\/\/\S+/g, "")
-    // Same hashtag shape RichText highlights — the tsconfig target predates
-    // unicode property escapes, so this stays ASCII on purpose.
-    .replace(/#[A-Za-z0-9_]+/g, "")
-    .trim();
-  const firstPara = body.split(/\n{2,}/)[0] ?? body;
-  const sentences = firstPara.match(/[^.!?]+[.!?]?/g) ?? [firstPara];
-  let out = "";
-  for (const s of sentences) {
-    if (out && (out + s).trim().length > 170) break;
-    out += s;
-    if (out.trim().length >= 60) break;
-  }
-  return out.trim().replace(/\s+/g, " ");
-}
-
-/**
- * Where a post's artwork comes from, in order of preference.
- *
- * The topic's own page publishes a share image, and that is always the better
- * picture: it is the real thing a follower sees, already designed. But WWSH,
- * Iris & Sage and Emeka Ignites have no website, so no page and no share image
- * ever — and those posts were going out with nothing attached at all.
- *
- * So the generated card is the floor, not the goal. Every post ends up with
- * something you can actually publish.
- */
-export function generatedImageUrl(
-  brandSlug: string,
-  caption: string,
-  shape: "square" | "wide" = "square",
-): string {
-  const params = new URLSearchParams({
-    brand: brandSlug,
-    text: hookLine(caption),
-    shape,
-  });
-  return `/api/post-image?${params.toString()}`;
 }
 
 /**

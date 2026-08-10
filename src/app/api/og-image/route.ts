@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAllowedHost } from "@/lib/brand-hosts";
+import { extractImage } from "@/lib/share-image";
 
 export const runtime = "nodejs";
 
@@ -23,28 +24,8 @@ const FETCH_TIMEOUT_MS = 8_000;
 /** Share images change rarely; a day of caching keeps the calendar quick. */
 const CACHE_SECONDS = 86_400;
 
-function extractImage(html: string, pageUrl: string): string | null {
-  // og:image first, then twitter:image. Attribute order varies between the two
-  // conventions (property=… content=… and content=… property=…), so try both.
-  const patterns = [
-    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
-    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
-    /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
-    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
-  ];
-  for (const re of patterns) {
-    const m = html.match(re);
-    if (m?.[1]) {
-      try {
-        // Sites publish these both absolute and root-relative.
-        return new URL(m[1], pageUrl).toString();
-      } catch {
-        return null;
-      }
-    }
-  }
-  return null;
-}
+// extractImage moved to lib/share-image.ts — the Metricool export needs the
+// same lookup for a whole month at once, and shouldn't call this route 60 times.
 
 export async function GET(request: NextRequest) {
   const target = new URL(request.url).searchParams.get("url");
