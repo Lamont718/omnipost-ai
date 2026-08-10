@@ -90,7 +90,11 @@ export const BRANDS: Brand[] = [
       audience:
         "Adults 21+ who host game nights, buy party games as gifts, and like to argue for sport",
       cultural_context:
-        "YODM = 'Your Opinion Doesn't Matter'. A debating card game: 92 cards, 7 categories, a 30-second timer, and a 'For It or Against It' die. You draw a card, roll the die, and argue whichever side the die gives you — even if you disagree. The joke is that you don't get to pick.",
+        "YODM = 'Your Opinion Doesn't Matter'. A debating card game: 92 cards, 7 categories, a 30-second timer, and a die. " +
+        "⚠️ The die is ONLY used on cards in the 'For It or Against It' category — those carry a topic, you roll, and you argue whichever side it lands on. " +
+        "Every other category (Social Matters, Sex & Lies, Politics, Sports, Entertainment, The Ism's) is a straight debate question: you pick a side and make your case, no roll. " +
+        "The card's own category is given in the topic context — never mention the die, rolling, or 'you don't get to pick your side' unless that category is literally 'For It or Against It'. " +
+        "The name is about the arguing, not about the die.",
       emoji_style: "moderate",
       banned_words: [
         "elevate",
@@ -132,7 +136,7 @@ export const BRANDS: Brand[] = [
       },
     ],
     evergreenTopics: [
-      "The rule that makes YODM work: the die picks your side, not you",
+      "On a 'For It or Against It' card the die picks your side, not you — the one rule that changes the whole night",
       "What happens when someone has to argue against something they actually believe",
       "Why 30 seconds is exactly the right amount of time to make a bad argument",
       // Don't write evergreens that invite the model to enumerate something the
