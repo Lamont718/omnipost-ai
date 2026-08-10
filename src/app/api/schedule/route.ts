@@ -5,8 +5,14 @@ import { libraryFor, pickForSlot } from "@/lib/library";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// Topics come from sitemaps; re-derive at most hourly so the calendar is snappy.
-export const revalidate = 3600;
+// No `revalidate` here on purpose. It used to be 3600, which silently overrode
+// the force-dynamic above it and cached the whole response for an hour — so a
+// caption written a minute ago didn't show up, and verifying a write by
+// re-reading this route returned the same stale count either way.
+//
+// The hour of caching now lives on the sitemap and page-meta fetches in
+// lib/sources.ts, which is the part that's actually expensive and actually
+// slow to change. Captions stay live.
 
 /**
  * The calendar's data source. Returns every scheduled post for a month, each
@@ -68,8 +74,17 @@ export async function GET(request: NextRequest) {
         caption: captions[p.id]?.caption ?? null,
         // The brand's own artwork, when it has any. Beats the page's share
         // image — see the note in lib/library.ts.
-        image: pickForSlot(libraries.get(p.brandSlug) ?? [], p.id)?.url ?? null,
+        image:
+          pickForSlot(
+            libraries.get(p.brandSlug) ?? [],
+            p.id,
+            p.topic.url ?? p.topic.title,
+          )?.url ?? null,
       })),
+    }, {
+      // Never let the edge hold this: a caption written seconds ago has to
+      // show on the next load.
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
     console.error("schedule route failed:", error);

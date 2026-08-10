@@ -43,6 +43,12 @@ export interface Brand {
   /** Included in the calendar. */
   active: boolean;
   /**
+   * Artwork this brand already publishes, as absolute URLs. Used ahead of the
+   * page's share image, same as a Blob library — for a site that hosts good
+   * pictures but doesn't set og:image on the pages that use them.
+   */
+  imageLibrary?: string[];
+  /**
    * The posting schedule: one entry per weekly post — weekday, time, platform.
    * This is the whole "when do I post" model. The number of entries is how many
    * posts a week; edit these to change your cadence.
@@ -227,9 +233,20 @@ export const BRANDS: Brand[] = [
       keywords: ["NBA", "basketball", "debate", "villains", "rankings", "vote"],
       example_posts: [],
     },
+    // Only the page types that carry a real picture.
+    //
+    // /hall-of-villains/<player> and /blog/<why-everyone-hates-x> each set
+    // og:image to that player's own portrait — /villain-portraits/<player>.jpg.
+    // /rivalry/, /team/ and /era/ pages all fall back to the site-wide
+    // og-image.png, so posting them means the same generic graphic over and
+    // over. 97 pages still have portraits, which is four times the 24 slots a
+    // month, so nothing repeats.
+    //
+    // Worth revisiting if those page types ever get their own artwork.
     sources: [
       {
         sitemap: "https://www.mosthatednba.com/sitemap.xml",
+        include: [/\/hall-of-villains\//i, /\/blog\//i],
         exclude: BOILERPLATE,
       },
     ],
@@ -348,6 +365,25 @@ export const BRANDS: Brand[] = [
     // written ahead of the accounts existing, at Lamont's request — so treat
     // the queue as a bank of drafts, not something anyone is waiting on.
     active: true,
+    // The site has real food photography but sets og:image on none of the
+    // lesson or recipe pages, so posts were falling back to a generated card.
+    // These are the actual pictures heartoftheblock.org serves, already public
+    // — the oxtail lesson gets the oxtail photograph. Filename-matched where it
+    // can be (see pickForSlot), rotated where it can't.
+    imageLibrary: [
+      "https://heartoftheblock.org/images/food/oxtail.jpg",
+      "https://heartoftheblock.org/images/food/friedchicken.jpg",
+      "https://heartoftheblock.org/images/food/greens.jpg",
+      "https://heartoftheblock.org/images/food/beans.jpg",
+      "https://heartoftheblock.org/images/food/salmon.jpg",
+      "https://heartoftheblock.org/images/food/seafoodrice.jpg",
+      "https://heartoftheblock.org/images/food/soda.jpg",
+      "https://heartoftheblock.org/images/food/porridge.jpg",
+      "https://heartoftheblock.org/images/food/move.jpg",
+      "https://heartoftheblock.org/images/cooking.jpg",
+      "https://heartoftheblock.org/images/market.jpg",
+      "https://heartoftheblock.org/images/hero-block.jpg",
+    ],
     schedule: [
       { day: 1, time: "18:00", platform: "instagram" },
       { day: 4, time: "18:00", platform: "facebook" },

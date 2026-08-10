@@ -81,7 +81,11 @@ export async function GET(request: NextRequest) {
     const origin = new URL(request.url).origin;
     const rows: ExportPost[] = eligible.map((p) => {
       const caption = captions[p.id].caption;
-      const fromLibrary = pickForSlot(libraries.get(p.brandSlug) ?? [], p.id);
+      const fromLibrary = pickForSlot(
+        libraries.get(p.brandSlug) ?? [],
+        p.id,
+        p.topic.url ?? p.topic.title,
+      );
       const shareImage = p.topic.url ? imageByPage.get(p.topic.url) : null;
       // Same fallback the previews use, but absolute — Metricool fetches these
       // from its own servers, so a root-relative path would be meaningless.

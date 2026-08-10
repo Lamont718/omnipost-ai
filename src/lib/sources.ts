@@ -44,11 +44,25 @@ export function weekIndex(now: Date = new Date()): number {
   return Math.floor(now.getTime() / (7 * 24 * 60 * 60 * 1000));
 }
 
+/**
+ * Sitemaps and page metadata change on the order of days, but the calendar
+ * re-derives topics for every week it displays — a month view is roughly 30
+ * brand-weeks, each costing a sitemap fetch plus a page fetch per slot. Left
+ * uncached that was over a hundred round trips to Lamont's own sites on every
+ * single calendar load, which is what made it take up to half a minute.
+ *
+ * `next.revalidate` puts them in Next's data cache, so the whole month is
+ * served from a handful of real requests. This has to live on the fetch and
+ * not on the route, or fresh captions get cached along with it.
+ */
+const SOURCE_CACHE_SECONDS = 3600;
+
 async function fetchText(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: { "user-agent": "OmniPost/1.0 (+https://omnipost-ai-phi.vercel.app)" },
+      next: { revalidate: SOURCE_CACHE_SECONDS },
     });
     if (!res.ok) return null;
     return await res.text();
@@ -202,16 +216,18 @@ export async function topicsForBrand(
       : rotate(all, want, week)
   ).slice(0, want);
 
-  const topics: Topic[] = [];
-  for (const entry of picked) {
-    const meta = await fetchPageMeta(entry.url);
-    topics.push({
-      url: entry.url,
-      source: "site",
-      title: meta.title ?? pathOf(entry.url).replace(/[-/]/g, " ").trim(),
-      context: meta.description,
-    });
-  }
+  // In parallel: these were serial, and a slow page held up the whole week.
+  const topics: Topic[] = await Promise.all(
+    picked.map(async (entry) => {
+      const meta = await fetchPageMeta(entry.url);
+      return {
+        url: entry.url,
+        source: "site" as const,
+        title: meta.title ?? pathOf(entry.url).replace(/[-/]/g, " ").trim(),
+        context: meta.description,
+      };
+    }),
+  );
 
   // Top up from evergreens if the site gave us less than we wanted. A bare
   // string carries no context (the model gets no specifics to invent from); a

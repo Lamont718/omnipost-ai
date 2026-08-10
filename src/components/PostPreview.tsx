@@ -264,7 +264,11 @@ function MediaSlot({
         <div
           style={{
             aspectRatio: "1 / 1",
-            background: `linear-gradient(140deg, ${brand.colorHex}, ${brand.colorHex}cc)`,
+            // Neutral, like Instagram's own letterbox. Filling it with the
+            // brand colour looked like part of the artwork — a YODM card
+            // (red) sat in a purple frame that read as someone else's brand,
+            // not least because YODM and Emeka Explores share a colorHex.
+            background: "#f2f2f4",
             display: "flex",
             alignItems: "center",
           }}

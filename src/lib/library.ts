@@ -1,3 +1,5 @@
+import { brandBySlug } from "./brands";
+
 /**
  * A brand's own marketing images, hosted publicly so a post can carry one.
  *
@@ -26,23 +28,34 @@ function hasBlob(): boolean {
   return !!process.env.BLOB_READ_WRITE_TOKEN;
 }
 
-/** Every image for a brand, ordered by name so rotation is stable across reloads. */
+function nameOf(url: string): string {
+  return url.split("?")[0].split("/").pop()?.replace(/\.[a-z0-9]+$/i, "") ?? "";
+}
+
+/**
+ * Every image for a brand: the ones declared in brands.ts (artwork the brand's
+ * own site already serves) plus anything uploaded to Blob. Ordered by name so
+ * rotation is stable across reloads.
+ */
 export async function libraryFor(brandSlug: string): Promise<LibraryImage[]> {
-  if (!hasBlob()) return [];
-  try {
-    const { list } = await import("@vercel/blob");
-    const { blobs } = await list({ prefix: `${PREFIX}${brandSlug}/` });
-    return blobs
-      .map((b) => ({
-        url: b.url,
-        name: b.pathname.split("/").pop()?.replace(/\.[a-z0-9]+$/i, "") ?? "",
-      }))
-      .filter((i) => !!i.name)
-      .sort((a, b) => a.name.localeCompare(b.name));
-  } catch (err) {
-    console.error("libraryFor failed:", brandSlug, err);
-    return [];
+  const declared: LibraryImage[] = (brandBySlug(brandSlug)?.imageLibrary ?? []).map(
+    (url) => ({ url, name: nameOf(url) }),
+  );
+
+  let uploaded: LibraryImage[] = [];
+  if (hasBlob()) {
+    try {
+      const { list } = await import("@vercel/blob");
+      const { blobs } = await list({ prefix: `${PREFIX}${brandSlug}/` });
+      uploaded = blobs
+        .map((b) => ({ url: b.url, name: nameOf(b.pathname) }))
+        .filter((i) => !!i.name);
+    } catch (err) {
+      console.error("libraryFor failed:", brandSlug, err);
+    }
   }
+
+  return [...declared, ...uploaded].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
@@ -53,8 +66,25 @@ export async function libraryFor(brandSlug: string): Promise<LibraryImage[]> {
  * id rather than an index, so adding a brand or shifting the schedule doesn't
  * reshuffle every image on the calendar.
  */
-export function pickForSlot(images: LibraryImage[], slotId: string): LibraryImage | null {
+export function pickForSlot(
+  images: LibraryImage[],
+  slotId: string,
+  /** The topic's URL or title. An image whose name matches it wins. */
+  hint?: string,
+): LibraryImage | null {
   if (images.length === 0) return null;
+
+  // A post about oxtail should carry the oxtail photograph. Compare against a
+  // flattened hint so "oxtail-heart-smart" still matches "oxtail", and prefer
+  // the longest match so "friedchicken" beats a stray "chicken".
+  if (hint) {
+    const flat = hint.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const matches = images
+      .filter((i) => i.name.length >= 4 && flat.includes(i.name.toLowerCase()))
+      .sort((a, b) => b.name.length - a.name.length);
+    if (matches.length > 0) return matches[0];
+  }
+
   let hash = 0;
   for (let i = 0; i < slotId.length; i++) {
     hash = (hash * 31 + slotId.charCodeAt(i)) | 0;
