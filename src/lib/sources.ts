@@ -182,11 +182,25 @@ export async function topicsForBrand(
   const freshUrls = new Set(fresh.map((e) => e.url));
   const rest = all.filter((e) => !freshUrls.has(e.url));
 
+  /**
+   * A site-wide rebuild stamps every page with the same recent lastmod, and
+   * then "fresh" means nothing — it's the whole catalogue. Taking the newest
+   * few would pin the brand to the same handful of pages forever, and leave
+   * `rest` empty so the remaining slots fell through to evergreens.
+   *
+   * yodm.com is exactly this: all 92 cards carry one deploy date, so YODM was
+   * posting cards 0 and 1 every single week and filling its third slot with a
+   * generic angle. Freshness only earns its place when it identifies a genuine
+   * minority of the site.
+   */
+  const newsIsMeaningful = fresh.length > 0 && fresh.length <= all.length / 2;
+
   // Never let "new" crowd out everything else — at most half the week is news.
-  const picked: SitemapEntry[] = [
-    ...fresh.slice(0, Math.ceil(want / 2)),
-    ...rotate(rest, want, week),
-  ].slice(0, want);
+  const picked: SitemapEntry[] = (
+    newsIsMeaningful
+      ? [...fresh.slice(0, Math.ceil(want / 2)), ...rotate(rest, want, week)]
+      : rotate(all, want, week)
+  ).slice(0, want);
 
   const topics: Topic[] = [];
   for (const entry of picked) {
