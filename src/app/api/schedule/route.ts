@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { scheduledPostsInRange, withPinnedTopics } from "@/lib/schedule";
 import { readCaptions } from "@/lib/store";
-import { libraryFor, pickForSlot } from "@/lib/library";
+import { libraryFor } from "@/lib/library";
+import { brandBySlug } from "@/lib/brands";
+import { resolveArtwork, shareImagesForTopics } from "@/lib/post-artwork";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,25 +68,48 @@ export async function GET(request: NextRequest) {
       ),
     );
 
+    // The topic pages' own share images — a villain portrait, a YODM card —
+    // deduped to one fetch per distinct page and cached for a day. This route
+    // used to skip them entirely and return only library artwork, which is why
+    // MostHatedNBA and YODM showed no picture anywhere except inside the modal.
+    const shareImages = await shareImagesForTopics(
+      posts.flatMap((p) => {
+        const brand = brandBySlug(p.brandSlug);
+        return brand ? [{ brand, topic: p.topic }] : [];
+      }),
+    );
+
     return NextResponse.json({
       month: monthParam,
-      posts: posts.map((p) => ({
-        id: p.id,
-        date: p.date,
-        time: p.time,
-        platform: p.platform,
-        brand: { slug: p.brandSlug, name: p.brandName, colorHex: p.colorHex },
-        topic: p.topic,
-        caption: captions[p.id]?.caption ?? null,
-        // The brand's own artwork, when it has any. Beats the page's share
-        // image — see the note in lib/library.ts.
-        image:
-          pickForSlot(
-            libraries.get(p.brandSlug) ?? [],
-            p.id,
-            p.topic.url ?? p.topic.title,
-          )?.url ?? null,
-      })),
+      posts: posts.map((p) => {
+        const brand = brandBySlug(p.brandSlug);
+        const caption = captions[p.id]?.caption ?? null;
+        const artwork =
+          brand && caption
+            ? resolveArtwork({
+                brand,
+                slotId: p.id,
+                topic: p.topic,
+                caption,
+                library: libraries.get(p.brandSlug) ?? [],
+                shareImages,
+              })
+            : null;
+        return {
+          id: p.id,
+          date: p.date,
+          time: p.time,
+          platform: p.platform,
+          brand: { slug: p.brandSlug, name: p.brandName, colorHex: p.colorHex },
+          topic: p.topic,
+          caption,
+          // Null until there's a caption: the generated card is built from the
+          // caption's opening line, so there is nothing to draw before then.
+          image: artwork?.url ?? null,
+          imageAlt: artwork?.alt ?? null,
+          imageSource: artwork?.source ?? null,
+        };
+      }),
     }, {
       // Never let the edge hold this: a caption written seconds ago has to
       // show on the next load.

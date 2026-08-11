@@ -471,31 +471,21 @@ function PostDetail({
   }
 
   /**
-   * The same picture the preview above is showing: the topic page's own share
-   * image when it has one, otherwise the generated brand card. Resolved here as
-   * well as inside the preview so the button can never hand you a different file
-   * from the one you just looked at.
+   * The picture comes from the schedule API, which resolves it the same way the
+   * Metricool export does — library, then the page's own share image, then a
+   * generated card.
+   *
+   * This used to ask /api/og-image directly, and that was its own bug: asking
+   * the page bypassed the rule about sites that publish one share image for
+   * everything, so a WWSH basketball post opened showing the chess photo from
+   * communitynyc.org's homepage. Deciding it in one place on the server is what
+   * stops the modal, the grid, the showroom and the CSV disagreeing.
+   *
+   * A slot with no caption yet has no picture: the card is drawn from the
+   * caption's opening line, so there is nothing to draw until it's written.
    */
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  useEffect(() => {
-    let live = true;
-    const generated = caption ? generatedImageUrl(post.brand.slug, caption) : null;
-    if (!post.topic.url) {
-      setImageUrl(generated);
-      return;
-    }
-    fetch(`/api/og-image?url=${encodeURIComponent(post.topic.url)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (live) setImageUrl(d.image ?? generated);
-      })
-      .catch(() => {
-        if (live) setImageUrl(generated);
-      });
-    return () => {
-      live = false;
-    };
-  }, [post.topic.url, post.brand.slug, caption]);
+  const imageUrl =
+    post.image ?? (caption ? generatedImageUrl(post.brand.slug, caption) : null);
 
   const downloadHref = imageUrl
     ? `/api/download?url=${encodeURIComponent(imageUrl)}&name=${encodeURIComponent(
@@ -578,7 +568,10 @@ function PostDetail({
               topic={post.topic}
               caption={caption}
               when={format(new Date(post.date + "T00:00"), "MMM d")}
-              imageUrl={post.image}
+              // The same value the Save button downloads, so the file you get
+              // is the file you just looked at — including right after a
+              // Rewrite, when the stored picture hasn't caught up yet.
+              imageUrl={imageUrl}
             />
           ) : (
             <EmptyPreview platform={view} brand={post.brand} />

@@ -49,6 +49,26 @@ export interface Brand {
    */
   imageLibrary?: string[];
   /**
+   * True when the site publishes ONE og:image for every page, so it says
+   * nothing about the topic and must never be attached to a post.
+   *
+   * This is not a theoretical worry. communitynyc.org is a GoDaddy site with a
+   * single site-wide share image — a photo of kids at the chess programme — and
+   * it is served on /basketball, /about-us and the homepage alike. So every
+   * WWSH basketball post came out illustrated with chess. theconductor.net does
+   * the same thing: /bus/B31 and /bus/B41 both return /opengraph-image.
+   *
+   * A brand marked this way falls through to its library, then to a generated
+   * branded card. A card that says nothing is better than a picture that says
+   * something untrue.
+   *
+   * Only set it after checking two different pages actually return the same
+   * URL. yodm.com and mosthatednba.com both vary theirs per page and must not
+   * be flagged — that per-page picture is the entire reason their sources were
+   * narrowed to /card/ and /hall-of-villains/.
+   */
+  sitewideShareImage?: boolean;
+  /**
    * The posting schedule: one entry per weekly post — weekday, time, platform.
    * This is the whole "when do I post" model. The number of entries is how many
    * posts a week; edit these to change your cadence.
@@ -263,6 +283,10 @@ export const BRANDS: Brand[] = [
     colorHex: "#534AB7",
     tagline: "Youth development nonprofit",
     active: true,
+    // communitynyc.org serves the same chess-programme photo as og:image on
+    // every page, so basketball posts were going out illustrated with chess.
+    // Lift this the moment WWSH has real basketball photos in library/wwsh/.
+    sitewideShareImage: true,
     schedule: [
       { day: 2, time: "17:00", platform: "facebook" },
       { day: 4, time: "12:00", platform: "instagram" },
@@ -318,6 +342,9 @@ export const BRANDS: Brand[] = [
     colorHex: "#0EA5E9",
     tagline: "NYC subway & bus history",
     active: true,
+    // Every page returns the same /opengraph-image — verified on /bus/B31 and
+    // /bus/B41 — so a post about one route would carry the site's generic card.
+    sitewideShareImage: true,
     schedule: [{ day: 3, time: "08:00", platform: "x" }],
     voice: {
       tone: "Practical, plainspoken, New York — helpful with zero hype",
