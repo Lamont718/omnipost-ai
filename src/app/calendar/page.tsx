@@ -148,6 +148,23 @@ export default function CalendarPage() {
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* The grid answers "what's scheduled"; the sheet is the one you
+                actually work down when it's time to post. */}
+            <Link
+              href="/sheet"
+              style={{
+                fontSize: 12.5,
+                fontWeight: 700,
+                color: "#fff",
+                textDecoration: "none",
+                border: "1px solid #4f46e5",
+                background: "#4f46e5",
+                borderRadius: 8,
+                padding: "7px 12px",
+              }}
+            >
+              Posting sheet
+            </Link>
             <Link
               href="/designs"
               style={{

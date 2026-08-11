@@ -92,6 +92,12 @@ export default function HomePage() {
             Get Started
           </Link>
           <Link
+            href="/sheet"
+            className="border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium px-8 py-3 rounded-lg text-sm transition"
+          >
+            Open the posting sheet
+          </Link>
+          <Link
             href="/designs"
             className="border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium px-8 py-3 rounded-lg text-sm transition"
           >
