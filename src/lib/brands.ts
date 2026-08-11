@@ -228,6 +228,14 @@ export const BRANDS: Brand[] = [
     sources: [
       {
         sitemap: "https://www.emekaexplores.com/sitemap.xml",
+        // Only real lessons. Taking the whole sitemap meant the rotation kept
+        // landing on pages that are not posts: /press produced a caption
+        // addressed to "writers, reporters and bloggers", /schools/pilot is a
+        // sales page, and /sample/math-island/1 gave the topic the title "1".
+        // The bare /guides and /heroes hubs are excluded by the trailing slug —
+        // a hub has nothing specific to say, which is the thin grounding that
+        // has caused every fabrication in this app.
+        include: [/\/(guides|heroes)\/[a-z0-9-]+$/i],
         exclude: BOILERPLATE,
       },
     ],
@@ -473,7 +481,9 @@ export const BRANDS: Brand[] = [
         // /scan, /tracker, /plans and /directory are app screens behind a
         // login — the lessons and recipes are what's worth sending people to.
         include: [/\/learn\b/i, /\/recipes\b/i, /\/abcs\b/i, /\/swaps\b/i, /\/get-screened\b/i, /\/healthy-buys\b/i, /\/money-for-produce\b/i, /\/heart-risk\b/i],
-        exclude: BOILERPLATE.concat([/\/disclaimer\b/i]),
+        // The bare /learn hub lists the articles instead of being one, so it
+        // gives the writer nothing concrete — same reason Emeka's hubs are out.
+        exclude: BOILERPLATE.concat([/\/disclaimer\b/i, /\/learn\/?$/i]),
       },
     ],
     evergreenTopics: [
