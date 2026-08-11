@@ -21,6 +21,11 @@ export const maxDuration = 300;
  *   Preview, no writes:  …&preview=1
  *   One brand only:      …&brand=yodm
  *   N days ahead:        …&days=14
+ *   From a given day:    …&start=2026-09-06&days=28
+ *
+ * `days` is capped at 31 and counted from `start` (today by default), so filling
+ * a month that doesn't begin today — catching up the back half of September, say
+ * — needs `start`. Dates are read as local midnight, same as the default.
  *
  * Each caption is saved with the topic it was written from, and the calendar
  * shows that stored topic rather than re-deriving one. So this run is also the
@@ -53,7 +58,15 @@ export async function GET(request: Request) {
   const onlyBrand = params.get("brand");
   const days = Math.min(Math.max(Number(params.get("days")) || 7, 1), 31);
 
+  const startParam = params.get("start");
   const start = new Date();
+  if (startParam) {
+    const [y, m, d] = startParam.split("-").map(Number);
+    if (!y || !m || !d) {
+      return NextResponse.json({ error: "start must be YYYY-MM-DD" }, { status: 400 });
+    }
+    start.setFullYear(y, m - 1, d);
+  }
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(start.getDate() + days - 1);
