@@ -122,6 +122,19 @@ export const BRANDS: Brand[] = [
         "The card's own category is given in the topic context — never mention the die, rolling, or 'you don't get to pick your side' unless that category is literally 'For It or Against It'. " +
         "The name is about the arguing, not about the die.",
       emoji_style: "moderate",
+      // The category is printed in every card page's description, so whether the
+      // die applies is knowable per topic rather than something to reason about.
+      // Saying it in cultural_context was not enough: card 7, Social Matters,
+      // still went out telling people to roll for their side.
+      topic_constraints: [
+        {
+          unless: /For It or Against It/i,
+          rule:
+            "This card is NOT in the 'For It or Against It' category, so the die is not used on it. " +
+            "Do not mention a die, rolling, chance, or being assigned or given a side. " +
+            "On this card the player picks their own side and argues it.",
+        },
+      ],
       banned_words: [
         "elevate",
         "unleash",

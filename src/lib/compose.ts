@@ -147,6 +147,21 @@ export async function composePost(opts: {
       "VERIFIED FACTS: none available. Use no specific numbers, names, prices or feature lists.",
     );
   }
+  // Rules that only bite on some topics, selected here rather than left for the
+  // model to infer from the background paragraph. Matched against the title and
+  // the verified facts together, because the distinguishing detail is usually in
+  // the facts (a YODM card's category lives in its page description).
+  const haystack = `${topic.title}\n${topic.context ?? ""}`;
+  const constraints = (brand.voice.topic_constraints ?? []).filter(
+    (c) => (!c.when || c.when.test(haystack)) && (!c.unless || !c.unless.test(haystack)),
+  );
+  if (constraints.length) {
+    parts.push(
+      "HARD CONSTRAINTS FOR THIS TOPIC — these override everything above:\n" +
+        constraints.map((c) => `- ${c.rule}`).join("\n"),
+    );
+  }
+
   if (toneOverride) parts.push(`Tone adjustment: ${toneOverride}`);
   const userPrompt = parts.join("\n\n");
 

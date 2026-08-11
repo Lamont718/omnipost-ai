@@ -21,6 +21,25 @@ export interface PostSlot {
   platform: Platform;
 }
 
+/**
+ * A rule that only applies to some of a brand's topics, matched against the
+ * topic title and its verified facts.
+ *
+ * `cultural_context` is prose, and prose gets weighed rather than obeyed. YODM's
+ * profile has spelled out for weeks that only "For It or Against It" cards use
+ * the die, and a Social Matters card still went out telling people to roll. A
+ * constraint that is selected per topic and stated as a flat prohibition is a
+ * different kind of instruction from a paragraph of background.
+ */
+export interface TopicConstraint {
+  /** Apply only when the topic title or its verified facts match. */
+  when?: RegExp;
+  /** Apply only when they do NOT match. */
+  unless?: RegExp;
+  /** Stated as an instruction, not as background. */
+  rule: string;
+}
+
 export interface VoiceProfile {
   tone: string;
   audience: string;
@@ -30,6 +49,8 @@ export interface VoiceProfile {
   example_posts?: string[];
   cultural_context: string;
   emoji_style: EmojiStyle;
+  /** Rules that switch on per topic — see TopicConstraint. */
+  topic_constraints?: TopicConstraint[];
 }
 
 export interface Organization {
