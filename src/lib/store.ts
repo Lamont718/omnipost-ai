@@ -30,6 +30,22 @@ import type { Topic } from "./sources";
  * Parts would pile up and make reads slow, so the weekly cron calls
  * `compactCaptions` instead: it folds everything into one `captions.json` and
  * deletes the parts. One batched write, which was always the safe path.
+ *
+ * ---------------------------------------------------------------------------
+ * Why compaction keeps parts around for a while
+ *
+ * "Safe because the cron is the only caller and it runs alone" stopped being
+ * true the moment three fill runs went out back to back, one per brand. On 11
+ * August 2026 the second run wrote a 135-caption base and cleared the parts;
+ * the third, seconds later, read a base that was still the 123-caption version
+ * and wrote that back. Twelve freshly generated captions were gone.
+ *
+ * The stale read is not the part that hurts — merging is meant to survive it.
+ * What made it fatal was deleting the parts, because that removed the copies
+ * the stale read would otherwise have layered back on top. So a part is now
+ * only deleted once it is BOTH present in the base that was just written AND
+ * older than PART_GRACE_MS, which keeps a recent write recoverable for longer
+ * than any propagation delay observed here.
  */
 
 export interface StoredCaption extends GenerateResponse {
@@ -68,6 +84,12 @@ const PART_PREFIX = "caption-parts/";
 const NO_CACHE = 0;
 /** How many part blobs to fetch at once when reading. */
 const READ_CONCURRENCY = 12;
+/**
+ * How long a part must have existed before compaction may delete it. Covers the
+ * window in which another run could still be holding a pre-write snapshot of the
+ * base; ten minutes is far beyond the seconds-long lag seen in practice.
+ */
+const PART_GRACE_MS = 10 * 60 * 1000;
 
 function hasBlob(): boolean {
   return !!process.env.BLOB_READ_WRITE_TOKEN;
@@ -165,23 +187,41 @@ export async function writeCaptions(entries: CaptionMap): Promise<number> {
 }
 
 /**
- * Fold everything into the single base file and clear the parts.
+ * Fold everything into the single base file and retire the parts it now covers.
  *
- * This is the one place a read-merge-write happens, and it is safe here because
- * the weekly cron is the only caller and it runs alone. Parts are deleted only
- * after the base write succeeds, so a failure loses nothing.
+ * This is the one place a read-merge-write happens. It cannot lose a caption
+ * outright — see the note at the top of this file — because a part is only
+ * deleted once the base demonstrably contains it and it has aged past the window
+ * in which another run might still be working from an older snapshot.
  */
 export async function compactCaptions(entries: CaptionMap = {}): Promise<{
   total: number;
   added: number;
   partsCleared: number;
+  partsKept: number;
 }> {
-  if (!hasBlob()) return { total: 0, added: 0, partsCleared: 0 };
+  if (!hasBlob()) return { total: 0, added: 0, partsCleared: 0, partsKept: 0 };
 
   const { put, del, list } = await import("@vercel/blob");
 
+  // Snapshot the parts BEFORE reading, so a part written during the read is
+  // never a deletion candidate: it would not be in `merged` and so could be
+  // dropped without ever having been folded in.
+  const before = await list({ prefix: PART_PREFIX });
   const existing = await readCaptions();
   const merged = { ...existing, ...entries };
+
+  // Nothing new and nothing to tidy — rewriting the base here buys nothing and
+  // risks everything, since a stale read would be written back over good data.
+  // The run that cost twelve captions generated zero and still wrote.
+  if (!Object.keys(entries).length && !before.blobs.length) {
+    return {
+      total: Object.keys(merged).length,
+      added: 0,
+      partsCleared: 0,
+      partsKept: 0,
+    };
+  }
 
   await put(BASE_KEY, JSON.stringify(merged), {
     access: "public",
@@ -192,11 +232,19 @@ export async function compactCaptions(entries: CaptionMap = {}): Promise<{
   });
 
   let partsCleared = 0;
+  let partsKept = 0;
   try {
-    const { blobs } = await list({ prefix: PART_PREFIX });
-    if (blobs.length) {
-      await del(blobs.map((b) => b.url));
-      partsCleared = blobs.length;
+    const cutoff = Date.now() - PART_GRACE_MS;
+    const retire = before.blobs.filter((b) => {
+      const id = decodeURIComponent(b.pathname.slice(PART_PREFIX.length).replace(/\.json$/, ""));
+      const covered = Object.prototype.hasOwnProperty.call(merged, id);
+      const settled = new Date(b.uploadedAt).getTime() < cutoff;
+      return covered && settled;
+    });
+    partsKept = before.blobs.length - retire.length;
+    if (retire.length) {
+      await del(retire.map((b) => b.url));
+      partsCleared = retire.length;
     }
   } catch (err) {
     // The base file already holds everything, so leftover parts are harmless —
@@ -208,5 +256,6 @@ export async function compactCaptions(entries: CaptionMap = {}): Promise<{
     total: Object.keys(merged).length,
     added: Object.keys(entries).length,
     partsCleared,
+    partsKept,
   };
 }

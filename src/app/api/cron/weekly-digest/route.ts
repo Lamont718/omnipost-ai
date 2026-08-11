@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { scheduledPostsInRange } from "@/lib/schedule";
 import { brandBySlug } from "@/lib/brands";
 import { composePost } from "@/lib/compose";
-import { compactCaptions, readCaptions, CaptionMap } from "@/lib/store";
+import { compactCaptions, readCaptions, writeCaptions, CaptionMap } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,7 +73,15 @@ export async function GET(request: Request) {
 
   try {
     let slots = await scheduledPostsInRange(start, end);
-    if (onlyBrand) slots = slots.filter((s) => s.brandSlug === onlyBrand);
+    if (onlyBrand) {
+      // A slug that matches nothing used to filter every slot away and then
+      // report a clean run, so `brand=mosthatednba` (the real slug is
+      // `mosthated`) looked like success and wrote no posts at all.
+      if (!brandBySlug(onlyBrand)) {
+        return NextResponse.json({ error: `Unknown brand: ${onlyBrand}` }, { status: 400 });
+      }
+      slots = slots.filter((s) => s.brandSlug === onlyBrand);
+    }
 
     // Don't pay to rewrite what already exists. Every run used to regenerate
     // every slot in range, so a second run cost a full week of tokens and
@@ -133,17 +141,21 @@ export async function GET(request: Request) {
       });
     }
 
-    // Compaction rather than a plain write: this run is the only writer, so it
-    // can safely fold the on-demand parts into the base file and clear them,
-    // which is what keeps reads from getting slower every week.
+    // Persist first via the path that never reads and so cannot clobber, and
+    // only then compact. Durability no longer rides on the read-merge-write:
+    // if compaction writes a stale base, these parts are still there and the
+    // next read layers them back over it.
+    const persisted = await writeCaptions(captions);
     const result = await compactCaptions(captions);
 
     return NextResponse.json({
       written: result.total > 0,
       generated: Object.keys(captions).length,
+      persisted,
       skipped,
       storedTotal: result.total,
       partsCompacted: result.partsCleared,
+      partsKept: result.partsKept,
       failures,
       note: result.total === 0 ? "BLOB_READ_WRITE_TOKEN not set — nothing saved" : undefined,
     });
