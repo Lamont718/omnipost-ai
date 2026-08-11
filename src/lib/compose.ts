@@ -43,6 +43,24 @@ function platformRule(platform: Platform): string {
   }
 }
 
+/**
+ * Ceilings the platform itself enforces, as opposed to house style.
+ *
+ * Only X actually rejects an overlong post, so it is the only one listed — a
+ * caption over this is not "a bit long", it is unpostable. The rule in
+ * `platformRule()` asks the model for 280; asking is not the same as checking,
+ * and a 287-character X post reached the September calendar because nothing
+ * verified it. `composePost` now measures and rewrites.
+ *
+ * `.length` is the right measure here rather than code-point count: X weights
+ * most emoji as 2 characters, and a non-BMP emoji is exactly 2 UTF-16 units, so
+ * the two agree. It stays slightly conservative, which is the safe direction.
+ */
+const PLATFORM_LIMIT: Partial<Record<Platform, number>> = { x: 280 };
+
+/** How many rewrites to spend pulling an overlong caption back under the limit. */
+const LENGTH_RETRIES = 2;
+
 function buildSystemPrompt(
   brandName: string,
   voice: VoiceProfile,
@@ -165,16 +183,61 @@ export async function composePost(opts: {
   if (toneOverride) parts.push(`Tone adjustment: ${toneOverride}`);
   const userPrompt = parts.join("\n\n");
 
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: userPrompt }];
+  let best = await generate(system, messages, brand.voice);
+
+  // Ask, then check. The model is told the limit up front but does overshoot,
+  // and an over-limit X caption is unpostable rather than merely untidy. Hand
+  // back its own draft with the arithmetic and let it cut.
+  const limit = PLATFORM_LIMIT[platform];
+  if (limit) {
+    for (let attempt = 0; attempt < LENGTH_RETRIES && best.caption.length > limit; attempt++) {
+      const over = best.caption.length - limit;
+      messages.push(
+        { role: "assistant", content: JSON.stringify(best) },
+        {
+          role: "user",
+          content:
+            `That caption is ${best.caption.length} characters — ${over} over the ${limit}-character ` +
+            `limit for ${platform}. Rewrite it under ${limit} characters including hashtags. Cut words, ` +
+            `not facts: keep the same subject and every verified detail, and do not add anything new. ` +
+            `Reply with the same JSON shape.`,
+        },
+      );
+      const retry = await generate(system, messages, brand.voice);
+      // Keep whichever is shortest — a retry that came back longer is no use.
+      if (retry.caption.length < best.caption.length) best = retry;
+      if (best.caption.length <= limit) break;
+    }
+
+    if (best.caption.length > limit) {
+      // Surfaced rather than swallowed: the caller stores this, and a silently
+      // overlong caption is exactly the failure this block exists to stop.
+      console.warn(
+        `[compose] ${brand.slug}/${platform}: caption still ${best.caption.length} chars ` +
+          `after ${LENGTH_RETRIES} rewrites (limit ${limit}) — topic: ${topic.title}`,
+      );
+    }
+  }
+
+  return best;
+}
+
+async function generate(
+  system: string,
+  messages: Anthropic.MessageParam[],
+  voice: VoiceProfile,
+): Promise<GenerateResponse> {
   const message = await anthropic().messages.create({
     model: "claude-opus-4-8",
     max_tokens: 4096,
     thinking: { type: "adaptive" },
     output_config: { effort: "medium" },
     system,
-    messages: [{ role: "user", content: userPrompt }],
+    messages,
   });
 
   // With adaptive thinking, content[0] may be a thinking block.
   const block = message.content.find((b) => b.type === "text");
-  return parseReply(block && block.type === "text" ? block.text : "", brand.voice);
+  return parseReply(block && block.type === "text" ? block.text : "", voice);
 }
