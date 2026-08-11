@@ -76,7 +76,10 @@ export default function SheetPage() {
   const [brandSlug, setBrandSlug] = useState<string>("all");
   const [posted, setPosted] = useState<Record<string, string>>({});
   const [hidePosted, setHidePosted] = useState(false);
+  const [showPast, setShowPast] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+
+  const today = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => setPosted(loadPosted()), []);
 
@@ -99,13 +102,21 @@ export default function SheetPage() {
    * post, so listing it would only pad the work-list with things you can't do —
    * the count of them is reported instead.
    */
-  const { rows, unwritten } = useMemo(() => {
+  const { rows, unwritten, pastHidden } = useMemo(() => {
     const mine = posts.filter((p) => brandSlug === "all" || p.brand.slug === brandSlug);
     const written = mine.filter((p) => p.caption);
-    const visible = hidePosted ? written.filter((p) => !posted[p.id]) : written;
+    // A month view spills into the neighbouring months, so opening this in
+    // August led with 28 July — dates that can't be posted, and the ones most
+    // likely to carry an old caption paired to a topic that has since moved.
+    const ahead = showPast ? written : written.filter((p) => p.date >= today);
+    const visible = hidePosted ? ahead.filter((p) => !posted[p.id]) : ahead;
     visible.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-    return { rows: visible, unwritten: mine.length - written.length };
-  }, [posts, brandSlug, hidePosted, posted]);
+    return {
+      rows: visible,
+      unwritten: mine.filter((p) => !p.caption && (showPast || p.date >= today)).length,
+      pastHidden: written.length - written.filter((p) => p.date >= today).length,
+    };
+  }, [posts, brandSlug, hidePosted, posted, showPast, today]);
 
   const doneCount = rows.filter((p) => posted[p.id]).length;
 
@@ -192,6 +203,15 @@ export default function SheetPage() {
             {hidePosted ? "Showing what's left" : "Show what's left"}
           </button>
 
+          {pastHidden > 0 && (
+            <button
+              onClick={() => setShowPast((v) => !v)}
+              style={{ ...selectStyle, cursor: "pointer", fontWeight: 600 }}
+            >
+              {showPast ? "Hide past" : `Show ${pastHidden} past`}
+            </button>
+          )}
+
           <button
             onClick={() => window.print()}
             style={{ ...selectStyle, cursor: "pointer", fontWeight: 600 }}
@@ -208,7 +228,8 @@ export default function SheetPage() {
               <strong style={{ color: "#0f172a" }}>
                 {doneCount} of {rows.length} posted
               </strong>{" "}
-              {brandSlug === "all" ? "across all brands" : ""} this month.
+              {brandSlug === "all" ? "across all brands" : ""}
+              {showPast ? " this month" : " from today onwards"}.
               {unwritten > 0 && (
                 <>
                   {" "}
@@ -238,7 +259,9 @@ export default function SheetPage() {
           >
             {hidePosted
               ? "Everything here is posted. 🎉"
-              : "Nothing written for this month yet."}
+              : pastHidden > 0
+                ? "Nothing left to post this month — the rest is already behind you."
+                : "Nothing written for this month yet."}
           </div>
         )}
 
@@ -327,7 +350,11 @@ function PostRow({
             style={{
               width: 108,
               height: 108,
-              objectFit: "cover",
+              // `contain`, not `cover`: a YODM card cropped to a square loses
+              // half its question, and the picture is here to be recognised,
+              // not to look tidy. Letterbox stays neutral grey so it never
+              // reads as brand colour.
+              objectFit: "contain",
               borderRadius: 8,
               background: "#f1f5f9",
               display: "block",
