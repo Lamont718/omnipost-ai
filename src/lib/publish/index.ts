@@ -117,7 +117,22 @@ export async function publishSlot(id: string, origin: string): Promise<PublishOu
     };
   }
 
-  const { brand, post, caption, artwork } = await resolvePost(id, origin);
+  // A slot id that doesn't parse, isn't on the schedule, or has no caption yet
+  // is the caller's mistake, not a server fault. Letting it throw made the route
+  // answer 500, which reads in the logs as "the publisher is broken" when it
+  // means "that post doesn't exist".
+  let resolved: Awaited<ReturnType<typeof resolvePost>>;
+  try {
+    resolved = await resolvePost(id, origin);
+  } catch (error) {
+    return {
+      id,
+      published: false,
+      error: error instanceof Error ? error.message : "could not find that post",
+    };
+  }
+
+  const { brand, post, caption, artwork } = resolved;
   const platform = post.platform;
 
   if (!isPublishable(platform)) {
