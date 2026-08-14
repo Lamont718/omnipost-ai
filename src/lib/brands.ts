@@ -106,9 +106,13 @@ export const BRANDS: Brand[] = [
     // account on the same day — check one against the other before posting, or
     // stand one of them down again.
     active: true,
+    // Thursday was Facebook until 14 Aug 2026. There is no YODM Facebook Page
+    // and there isn't going to be one — Lamont's Facebook is personal. The slot
+    // moved to Instagram rather than being deleted because the card graphic is
+    // the strongest thing this brand has and Instagram is where it lands.
     schedule: [
       { day: 2, time: "18:00", platform: "instagram" },
-      { day: 4, time: "19:00", platform: "facebook" },
+      { day: 4, time: "19:00", platform: "instagram" },
       { day: 6, time: "11:00", platform: "x" },
     ],
     voice: {
@@ -190,9 +194,12 @@ export const BRANDS: Brand[] = [
     colorHex: "#7C3AED",
     tagline: "Kids' learning site — 130+ lessons",
     active: true,
+    // Wednesday was Facebook until 14 Aug 2026 — see the note on YODM. Kept at
+    // three posts a week, all Instagram, because that is the only platform this
+    // brand actually has an audience on.
     schedule: [
       { day: 1, time: "09:00", platform: "instagram" },
-      { day: 3, time: "19:00", platform: "facebook" },
+      { day: 3, time: "19:00", platform: "instagram" },
       { day: 5, time: "09:00", platform: "instagram" },
     ],
     voice: {
@@ -308,10 +315,12 @@ export const BRANDS: Brand[] = [
     // every page, so basketball posts were going out illustrated with chess.
     // Lift this the moment WWSH has real basketball photos in library/wwsh/.
     sitewideShareImage: true,
-    schedule: [
-      { day: 2, time: "17:00", platform: "facebook" },
-      { day: 4, time: "12:00", platform: "instagram" },
-    ],
+    // Was Tuesday Facebook + Thursday Instagram. The Facebook slot is gone
+    // rather than moved: WWSH has only two postable pages on communitynyc.org,
+    // so it was already writing near-duplicates — three September posts opened
+    // with the same sentence. Fewer slots against the same two topics is an
+    // improvement, not a loss. Restore this when the site has more to say.
+    schedule: [{ day: 4, time: "12:00", platform: "instagram" }],
     voice: {
       tone: "Community-driven, warm, credible, Brooklyn-rooted",
       audience:
@@ -432,10 +441,11 @@ export const BRANDS: Brand[] = [
       "https://heartoftheblock.org/images/market.jpg",
       "https://heartoftheblock.org/images/hero-block.jpg",
     ],
-    schedule: [
-      { day: 1, time: "18:00", platform: "instagram" },
-      { day: 4, time: "18:00", platform: "facebook" },
-    ],
+    // Thursday's Facebook slot dropped 14 Aug 2026. Heart of the Block has no
+    // social accounts at all yet, so its posts are a bank of drafts either way —
+    // writing twice as many of them into a bank nobody is emptying was the
+    // wrong end to spend on.
+    schedule: [{ day: 1, time: "18:00", platform: "instagram" }],
     voice: {
       tone: "Warm, plain, neighbour-to-neighbour — never clinical, never scolding about food",
       audience:
