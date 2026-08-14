@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { publishSlot } from "@/lib/publish";
 import { readiness } from "@/lib/accounts";
 import { readPublished } from "@/lib/published";
+import { checkInstagramTokens } from "@/lib/publish/check";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,11 +23,20 @@ export const dynamic = "force-dynamic";
  * route is called.
  */
 
-export async function GET() {
-  const [published] = await Promise.all([readPublished()]);
+export async function GET(request: NextRequest) {
+  // ?check=1 additionally proves each Instagram token still works and names the
+  // account it belongs to. One round trip per account, so it's opt-in.
+  const wantsCheck = new URL(request.url).searchParams.get("check") === "1";
+
+  const [published, checks] = await Promise.all([
+    readPublished(),
+    wantsCheck ? checkInstagramTokens() : Promise.resolve(undefined),
+  ]);
+
   return NextResponse.json(
     {
       brands: readiness(),
+      ...(checks ? { checks } : {}),
       published: Object.values(published).map((r) => ({
         id: r.id,
         publishedAt: r.publishedAt,

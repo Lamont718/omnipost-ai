@@ -14,15 +14,20 @@ to think about — see "Keeping it working" at the end for the one that does.
 
 ## Before you start
 
-**Every Instagram account must be a Professional account (Business or Creator),
-and each one must be linked to a Facebook Page.** A personal Instagram account
-cannot be posted to by any app, including this one — there is no workaround and
-no setting to change. Converting is free and takes about a minute in the
+**Every Instagram account must be a Professional account — Business or
+Creator.** A personal account cannot be posted to by any app, including this
+one; there is no workaround. Converting is free and takes about a minute in the
 Instagram app: Settings → Account type and tools → Switch to professional
 account.
 
-If an account is still personal, convert it first. Nothing else here will work
-for that brand until you do.
+**You do not need a Facebook Page.** Meta's original publishing API required
+one, and most guides still say so, but the Instagram API with Instagram Login
+(July 2024) lets a Business or Creator account publish on its own token with no
+Page anywhere in the picture. That is the route below, because Lamont's Facebook
+is personal and there are no Pages for the projects.
+
+If a brand *does* already have a Page, the older route still works and is
+documented at the end.
 
 ---
 
@@ -31,38 +36,36 @@ for that brand until you do.
 1. Go to <https://developers.facebook.com/apps> and create an app.
    Choose **Business** as the type.
 2. Leave the app in **Development** mode. Do not submit it for review.
-3. Add the **Instagram Graph API** and **Facebook Login for Business** products.
-4. Under **App roles → Roles**, add yourself, and add each Instagram account you
-   want to post to as an **Instagram Tester**. Each account then has to accept
-   the invite from Instagram: Settings → Apps and websites → Tester invites.
+3. Add the **Instagram** product, and pick **API setup with Instagram login**.
+   (Not "with Facebook login" — that is the route that wants a Page.)
 
-## 2. Get the ids and the token
+## 2. Connect the account and generate its token
 
-You need three values per brand. The Graph API Explorer
-(<https://developers.facebook.com/tools/explorer/>) is the quickest way:
+Still under **Instagram → API setup with Instagram login**:
 
-- **Page access token** — select your app, select the Page, and request the
-  permissions `pages_show_list`, `pages_manage_posts`, `pages_read_engagement`,
-  `instagram_basic`, `instagram_content_publish`. Generate the token.
-- **Facebook Page id** — call `GET /me/accounts`; it is the `id` next to the
-  Page name.
-- **Instagram user id** — call `GET /{page-id}?fields=instagram_business_account`.
-  This is a long number, **not** the @handle.
+1. **Add account** — sign in as the brand's Instagram account and authorise it.
+2. The account appears in the list with its **Instagram user id**, a long
+   number. That is `IG_USER_ID_<SUFFIX>` — it is not the @handle.
+3. Press **Generate token** next to the account. That is `IG_TOKEN_<SUFFIX>`.
+   Copy it immediately; the dashboard will not show it again.
 
-Then exchange the short-lived token for a long-lived one, which lasts about 60
-days:
+The permissions needed are `instagram_business_basic` and
+`instagram_business_content_publish`, both of which this setup grants for an
+account you own without any review.
+
+⚠️ **This token lasts 60 days.** Unlike a Page token, it does expire, and it
+expires silently — everything works until one day a post doesn't go out. Put a
+reminder in the calendar. Refresh it with:
 
 ```
-GET https://graph.facebook.com/v21.0/oauth/access_token
-  ?grant_type=fb_exchange_token
-  &client_id=<app id>
-  &client_secret=<app secret>
-  &fb_exchange_token=<short-lived token>
+GET https://graph.instagram.com/refresh_access_token
+  ?grant_type=ig_refresh_token
+  &access_token=<current token>
 ```
 
-A Page token obtained *using* a long-lived user token does not expire at all,
-which is the one you want. Call `GET /me/accounts` again with the long-lived
-user token and take the Page token from that response.
+That returns a fresh 60-day token; set it as `IG_TOKEN_<SUFFIX>` and redeploy.
+`GET /api/publish?check=1` tells you whether every connected token still works
+and which account it belongs to, so you can check without posting anything.
 
 ## 3. Set up X
 
@@ -100,12 +103,16 @@ Note MostHatedNBA is `MOSTHATED`, matching its slug — not `MOSTHATEDNBA`.
 Per brand, all optional — set only what that brand has:
 
 ```
-META_PAGE_TOKEN_<SUFFIX>     Page access token (serves both IG and FB)
-IG_USER_ID_<SUFFIX>          Instagram Business account id
-FB_PAGE_ID_<SUFFIX>          Facebook Page id
+IG_USER_ID_<SUFFIX>          Instagram Business account id      ← always
+IG_TOKEN_<SUFFIX>            Instagram-Login token (no Page)    ← this route
 X_ACCESS_TOKEN_<SUFFIX>      per-account X token
 X_ACCESS_SECRET_<SUFFIX>     per-account X secret
+
+META_PAGE_TOKEN_<SUFFIX>     Page token — only for the older Page route
+FB_PAGE_ID_<SUFFIX>          Facebook Page id — only if posting to a Page
 ```
+
+`IG_TOKEN_` wins over `META_PAGE_TOKEN_` when both are set.
 
 Once app-wide:
 
@@ -118,7 +125,7 @@ META_API_VERSION             optional, defaults to v21.0
 Set them on Vercel as **Sensitive** so they cannot be read back:
 
 ```
-vercel env add META_PAGE_TOKEN_YODM production --value="…" --sensitive
+vercel env add IG_TOKEN_YODM production --value="…" --sensitive
 ```
 
 ⚠️ `vercel env add` reading from stdin is broken — always use the `--value=`
@@ -126,6 +133,26 @@ flag.
 
 Redeploy after adding them. A brand with no credentials simply has no Post
 button; nothing else about the app changes.
+
+---
+
+## The older route, if a brand already has a Facebook Page
+
+Only worth using for an account that is already linked to a Page — there is no
+reason to create one just to post to Instagram.
+
+1. In the Meta app, add **Instagram Graph API** and **Facebook Login for
+   Business** instead, and add the account under **App roles → Instagram
+   Tester**.
+2. In the Graph API Explorer, request `pages_show_list`, `pages_manage_posts`,
+   `pages_read_engagement`, `instagram_basic`, `instagram_content_publish`.
+3. `GET /me/accounts` gives the Page id and the Page token.
+   `GET /{page-id}?fields=instagram_business_account` gives the IG user id.
+4. Exchange for a long-lived user token, then take the Page token from
+   `GET /me/accounts` again — a Page token derived that way does not expire,
+   which is the one real advantage this route has.
+
+Set `META_PAGE_TOKEN_<SUFFIX>` and `FB_PAGE_ID_<SUFFIX>`.
 
 ---
 

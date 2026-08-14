@@ -49,10 +49,34 @@ function env(name: string): string | undefined {
   return value && value.trim() ? value.trim() : undefined;
 }
 
+/**
+ * Instagram has two publishing routes, and which one you need depends on
+ * something outside this code: whether the account is tied to a Facebook Page.
+ *
+ *  - **page** — the original Instagram Graph API. The IG account is linked to a
+ *    Facebook Page and publishing is authorised by that Page's token, on
+ *    graph.facebook.com.
+ *  - **direct** — Instagram API with Instagram Login, added by Meta in July
+ *    2024. A Business or Creator account with no Facebook Page at all, holding
+ *    its own token, on graph.instagram.com.
+ *
+ * Lamont doesn't use Facebook for the projects — the accounts are personal and
+ * he isn't creating Pages for six brands to satisfy an API. So `direct` is the
+ * route that actually matches the situation, and `page` stays supported because
+ * an account that already has a Page shouldn't be made to move.
+ *
+ * The publishing calls are identical apart from the host, which is the whole
+ * reason this is one type with a `host` on it rather than two code paths.
+ */
 export interface InstagramAccount {
   igUserId: string;
-  pageToken: string;
+  token: string;
+  host: string;
+  route: "page" | "direct";
 }
+
+const GRAPH_FACEBOOK = "https://graph.facebook.com";
+const GRAPH_INSTAGRAM = "https://graph.instagram.com";
 
 export interface FacebookAccount {
   pageId: string;
@@ -69,8 +93,20 @@ export interface XAccount {
 export function instagramAccount(slug: string): InstagramAccount | null {
   const s = envSuffix(slug);
   const igUserId = env(`IG_USER_ID_${s}`);
+  if (!igUserId) return null;
+
+  // The Instagram-Login token wins where both are set. Someone who has gone to
+  // the trouble of generating one is telling us which route they're on.
+  const directToken = env(`IG_TOKEN_${s}`);
+  if (directToken) {
+    return { igUserId, token: directToken, host: GRAPH_INSTAGRAM, route: "direct" };
+  }
+
   const pageToken = env(`META_PAGE_TOKEN_${s}`);
-  return igUserId && pageToken ? { igUserId, pageToken } : null;
+  if (pageToken) {
+    return { igUserId, token: pageToken, host: GRAPH_FACEBOOK, route: "page" };
+  }
+  return null;
 }
 
 export function facebookAccount(slug: string): FacebookAccount | null {

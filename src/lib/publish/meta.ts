@@ -1,5 +1,7 @@
 import { FacebookAccount, InstagramAccount } from "../accounts";
 
+export type { InstagramAccount };
+
 /**
  * Publishing to Instagram and Facebook Pages.
  *
@@ -15,6 +17,11 @@ import { FacebookAccount, InstagramAccount } from "../accounts";
 
 const API_VERSION = process.env.META_API_VERSION || "v21.0";
 const GRAPH = `https://graph.facebook.com/${API_VERSION}`;
+
+/** The base for an Instagram account, which may be either Graph host. */
+function igBase(account: InstagramAccount): string {
+  return `${account.host}/${API_VERSION}`;
+}
 
 /** Meta can take a few seconds to fetch and process the image. */
 const CONTAINER_POLL_ATTEMPTS = 10;
@@ -71,26 +78,28 @@ export async function publishToInstagram(
   caption: string,
   imageUrl: string,
 ): Promise<MetaPostResult> {
-  const create = new URL(`${GRAPH}/${account.igUserId}/media`);
+  const base = igBase(account);
+
+  const create = new URL(`${base}/${account.igUserId}/media`);
   create.searchParams.set("image_url", imageUrl);
   create.searchParams.set("caption", caption);
-  create.searchParams.set("access_token", account.pageToken);
+  create.searchParams.set("access_token", account.token);
 
   const container = await graph(create.toString(), { method: "POST" });
   const containerId = String(container.id ?? "");
   if (!containerId) throw new Error("Instagram did not return a media container id");
 
-  await waitForContainer(containerId, account.pageToken);
+  await waitForContainer(base, containerId, account.token);
 
-  const publish = new URL(`${GRAPH}/${account.igUserId}/media_publish`);
+  const publish = new URL(`${base}/${account.igUserId}/media_publish`);
   publish.searchParams.set("creation_id", containerId);
-  publish.searchParams.set("access_token", account.pageToken);
+  publish.searchParams.set("access_token", account.token);
 
   const published = await graph(publish.toString(), { method: "POST" });
   const remoteId = String(published.id ?? "");
   if (!remoteId) throw new Error("Instagram did not return a post id");
 
-  return { remoteId, permalink: await permalinkFor(remoteId, account.pageToken) };
+  return { remoteId, permalink: await permalinkFor(base, remoteId, account.token) };
 }
 
 /**
@@ -99,9 +108,9 @@ export async function publishToInstagram(
  * a misleading error, so this waits for FINISHED and surfaces the real reason
  * on ERROR, which is nearly always the image being the wrong format or too big.
  */
-async function waitForContainer(containerId: string, token: string): Promise<void> {
+async function waitForContainer(base: string, containerId: string, token: string): Promise<void> {
   for (let attempt = 0; attempt < CONTAINER_POLL_ATTEMPTS; attempt++) {
-    const url = new URL(`${GRAPH}/${containerId}`);
+    const url = new URL(`${base}/${containerId}`);
     url.searchParams.set("fields", "status_code,status");
     url.searchParams.set("access_token", token);
 
@@ -117,9 +126,13 @@ async function waitForContainer(containerId: string, token: string): Promise<voi
   throw new Error("Instagram is still processing the image — try again in a minute");
 }
 
-async function permalinkFor(mediaId: string, token: string): Promise<string | undefined> {
+async function permalinkFor(
+  base: string,
+  mediaId: string,
+  token: string,
+): Promise<string | undefined> {
   try {
-    const url = new URL(`${GRAPH}/${mediaId}`);
+    const url = new URL(`${base}/${mediaId}`);
     url.searchParams.set("fields", "permalink");
     url.searchParams.set("access_token", token);
     const body = await graph(url.toString());
