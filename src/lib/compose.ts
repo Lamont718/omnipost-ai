@@ -56,7 +56,7 @@ function platformRule(platform: Platform): string {
  * most emoji as 2 characters, and a non-BMP emoji is exactly 2 UTF-16 units, so
  * the two agree. It stays slightly conservative, which is the safe direction.
  */
-const PLATFORM_LIMIT: Partial<Record<Platform, number>> = { x: 280 };
+export const PLATFORM_LIMIT: Partial<Record<Platform, number>> = { x: 280 };
 
 /** How many rewrites to spend pulling an overlong caption back under the limit. */
 const LENGTH_RETRIES = 2;

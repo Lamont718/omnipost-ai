@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAllowedHost } from "@/lib/brand-hosts";
+import { isAllowedImageHost } from "@/lib/brand-hosts";
 
 export const runtime = "nodejs";
 
@@ -60,9 +60,9 @@ export async function GET(request: NextRequest) {
     if (resolved.protocol !== "https:" && resolved.protocol !== "http:") {
       return NextResponse.json({ error: "unsupported protocol" }, { status: 400 });
     }
-    if (!isAllowedHost(resolved.hostname)) {
+    if (!isAllowedImageHost(resolved.hostname)) {
       return NextResponse.json(
-        { error: `${resolved.hostname} is not one of the brand sites` },
+        { error: `${resolved.hostname} is not a brand site or image host` },
         { status: 403 },
       );
     }

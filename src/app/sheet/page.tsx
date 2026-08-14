@@ -34,6 +34,20 @@ interface SlotPost {
   image?: string | null;
 }
 
+/** What /api/publish reports about a brand's connected accounts. */
+interface BrandReadiness {
+  slug: string;
+  instagram: boolean;
+  facebook: boolean;
+  x: boolean;
+}
+
+interface PublishedRecord {
+  id: string;
+  publishedAt: string;
+  permalink?: string;
+}
+
 const LS_POSTED = "omnipost.posted";
 
 const PLATFORM_TAG: Record<Platform, string> = {
@@ -78,10 +92,40 @@ export default function SheetPage() {
   const [hidePosted, setHidePosted] = useState(false);
   const [showPast, setShowPast] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [readiness, setReadiness] = useState<Record<string, BrandReadiness>>({});
+  const [live, setLive] = useState<Record<string, PublishedRecord>>({});
+  const [publishing, setPublishing] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<Record<string, string>>({});
 
   const today = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => setPosted(loadPosted()), []);
+
+  /**
+   * What can actually be published, and what already has been.
+   *
+   * The published records come from the server rather than this browser. A tick
+   * in localStorage says "I posted this from this laptop"; the record says "this
+   * went out", which is the only version that stops the phone from posting it a
+   * second time.
+   */
+  useEffect(() => {
+    fetch("/api/publish")
+      .then((r) => r.json())
+      .then((d) => {
+        const brands: Record<string, BrandReadiness> = {};
+        for (const b of d.brands ?? []) brands[b.slug] = b;
+        setReadiness(brands);
+
+        const records: Record<string, PublishedRecord> = {};
+        for (const r of d.published ?? []) records[r.id] = r;
+        setLive(records);
+      })
+      .catch(() => {
+        // No connected accounts yet is the normal state — the sheet still works
+        // as a copy-and-paste list, so this failing changes nothing on screen.
+      });
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -109,16 +153,23 @@ export default function SheetPage() {
     // August led with 28 July — dates that can't be posted, and the ones most
     // likely to carry an old caption paired to a topic that has since moved.
     const ahead = showPast ? written : written.filter((p) => p.date >= today);
-    const visible = hidePosted ? ahead.filter((p) => !posted[p.id]) : ahead;
+    // A post that really went out counts as done even if this browser never
+    // ticked it — the server record is the one that survives changing device.
+    const visible = hidePosted ? ahead.filter((p) => !posted[p.id] && !live[p.id]) : ahead;
     visible.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
     return {
       rows: visible,
       unwritten: mine.filter((p) => !p.caption && (showPast || p.date >= today)).length,
       pastHidden: written.length - written.filter((p) => p.date >= today).length,
     };
-  }, [posts, brandSlug, hidePosted, posted, showPast, today]);
+  }, [posts, brandSlug, hidePosted, posted, live, showPast, today]);
 
-  const doneCount = rows.filter((p) => posted[p.id]).length;
+  const doneCount = rows.filter((p) => posted[p.id] || live[p.id]).length;
+
+  const connectedCount = useMemo(
+    () => Object.values(readiness).filter((b) => b.instagram || b.facebook || b.x).length,
+    [readiness],
+  );
 
   function togglePosted(id: string) {
     const next = { ...posted };
@@ -126,6 +177,59 @@ export default function SheetPage() {
     else next[id] = new Date().toISOString();
     setPosted(next);
     localStorage.setItem(LS_POSTED, JSON.stringify(next));
+  }
+
+  function canPublish(p: SlotPost): boolean {
+    const brand = readiness[p.brand.slug];
+    if (!brand) return false;
+    if (p.platform === "instagram") return brand.instagram;
+    if (p.platform === "facebook") return brand.facebook;
+    if (p.platform === "x") return brand.x;
+    return false;
+  }
+
+  /**
+   * Publish one post.
+   *
+   * The confirm is not boilerplate. Every other button on this page is
+   * reversible — a copy can be discarded, a tick can be un-ticked — and this one
+   * puts words in front of a real audience with no undo. Naming the brand and
+   * the platform in the prompt is what makes it possible to notice you are about
+   * to post the NBA caption to the children's-book account.
+   */
+  async function publish(p: SlotPost) {
+    const where = p.platform === "x" ? "X" : p.platform === "facebook" ? "Facebook" : "Instagram";
+    if (!window.confirm(`Post this to ${p.brand.name} on ${where} now?\n\nThis goes out live and can't be undone from here.`)) {
+      return;
+    }
+
+    setPublishing(p.id);
+    setPublishError((e) => ({ ...e, [p.id]: "" }));
+    try {
+      const res = await fetch("/api/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: p.id }),
+      });
+      const data = await res.json();
+
+      if (data.published || data.duplicate) {
+        setLive((l) => ({
+          ...l,
+          [p.id]: { id: p.id, publishedAt: data.publishedAt, permalink: data.permalink },
+        }));
+      }
+      if (!data.published) {
+        setPublishError((e) => ({ ...e, [p.id]: data.error ?? "it didn't go out" }));
+      }
+    } catch (error) {
+      setPublishError((e) => ({
+        ...e,
+        [p.id]: error instanceof Error ? error.message : "it didn't go out",
+      }));
+    } finally {
+      setPublishing(null);
+    }
   }
 
   function copyCaption(p: SlotPost) {
@@ -246,6 +350,33 @@ export default function SheetPage() {
           )}
         </div>
 
+        {/*
+          Said once at the top rather than repeated as a disabled button on
+          every row. Until the Meta and X credentials are in the environment
+          this page is exactly what it was before — a copy-and-paste list — and
+          it should say so plainly instead of looking broken.
+        */}
+        {!loading && connectedCount === 0 && (
+          <div
+            className="no-print"
+            style={{
+              border: "1px solid #e2e8f0",
+              background: "#fff",
+              borderRadius: 10,
+              padding: "12px 14px",
+              margin: "0 0 20px",
+              fontSize: 12.5,
+              lineHeight: 1.6,
+              color: "#475569",
+            }}
+          >
+            <strong style={{ color: "#0f172a" }}>No accounts connected yet.</strong> Copy and Save
+            image work as they always have. Add the Instagram, Facebook and X credentials to the
+            environment and a <strong>Post now</strong> button appears on every row that can go out
+            — see <code style={{ fontSize: 11.5 }}>docs/connecting-accounts.md</code> in the repo.
+          </div>
+        )}
+
         {!loading && rows.length === 0 && (
           <div
             style={{
@@ -290,6 +421,11 @@ export default function SheetPage() {
                 copied={copied === p.id}
                 onCopy={() => copyCaption(p)}
                 onToggle={() => togglePosted(p.id)}
+                connected={canPublish(p)}
+                live={live[p.id]}
+                publishing={publishing === p.id}
+                error={publishError[p.id]}
+                onPublish={() => publish(p)}
               />
             ))}
           </section>
@@ -305,12 +441,22 @@ function PostRow({
   copied,
   onCopy,
   onToggle,
+  connected,
+  live,
+  publishing,
+  error,
+  onPublish,
 }: {
   post: SlotPost;
   posted: boolean;
   copied: boolean;
   onCopy: () => void;
   onToggle: () => void;
+  connected: boolean;
+  live?: PublishedRecord;
+  publishing: boolean;
+  error?: string;
+  onPublish: () => void;
 }) {
   const caption = post.caption ?? "";
   const imageUrl = post.image ?? generatedImageUrl(post.brand.slug, caption);
@@ -337,7 +483,7 @@ function PostRow({
         borderRadius: 10,
         padding: 12,
         marginBottom: 10,
-        opacity: posted ? 0.55 : 1,
+        opacity: posted || live ? 0.55 : 1,
       }}
     >
       {/* Picture */}
@@ -469,6 +615,41 @@ function PostRow({
             marginTop: 8,
           }}
         >
+          {/*
+            The Post button only appears where the brand actually has that
+            platform connected, and it disappears once the post has gone out.
+            An always-visible button that fails on press teaches people to
+            distrust the page; an absent one is self-explanatory.
+          */}
+          {live ? (
+            <span
+              style={{
+                ...actionStyle,
+                cursor: "default",
+                borderColor: "#bbf7d0",
+                background: "#f0fdf4",
+                color: "#15803d",
+              }}
+            >
+              Posted live ✓
+            </span>
+          ) : connected && !over ? (
+            <button
+              className="no-print"
+              onClick={onPublish}
+              disabled={publishing}
+              style={{
+                ...actionStyle,
+                background: publishing ? "#eef2ff" : "#4f46e5",
+                borderColor: publishing ? "#c7d2fe" : "#4f46e5",
+                color: publishing ? "#4f46e5" : "#fff",
+                cursor: publishing ? "wait" : "pointer",
+              }}
+            >
+              {publishing ? "Posting…" : "Post now"}
+            </button>
+          ) : null}
+
           <button className="no-print" onClick={onCopy} style={actionStyle}>
             {copied ? "Copied ✓" : "Copy caption"}
           </button>
@@ -483,6 +664,18 @@ function PostRow({
           >
             {posted ? "Posted ✓ — undo" : "Mark as posted"}
           </button>
+
+          {live?.permalink && (
+            <a
+              className="no-print"
+              href={live.permalink}
+              target="_blank"
+              rel="noreferrer"
+              style={{ fontSize: 11.5, color: "#15803d", fontWeight: 600, textDecoration: "none" }}
+            >
+              see it live ↗
+            </a>
+          )}
           {post.topic.url && (
             <a
               href={post.topic.url}
@@ -508,6 +701,30 @@ function PostRow({
                 }`}
           </span>
         </div>
+
+        {/*
+          Publishing failures are shown on the row that failed, in the platform's
+          own words. "It didn't work" sends you to the logs; "The image is not a
+          valid JPEG" or "requires instagram_content_publish" tells you which of
+          two completely different problems you have.
+        */}
+        {error && (
+          <div
+            className="no-print"
+            style={{
+              marginTop: 8,
+              fontSize: 12,
+              lineHeight: 1.5,
+              color: "#b91c1c",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: 7,
+              padding: "7px 10px",
+            }}
+          >
+            Didn&apos;t post: {error}
+          </div>
+        )}
       </div>
     </article>
   );
