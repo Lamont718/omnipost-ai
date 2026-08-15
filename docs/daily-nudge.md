@@ -24,7 +24,18 @@ Two environment variables. The rest is already deployed and running.
 vercel env add RESEND_API_KEY production --value="re_..." --scope lamont718s-projects
 ```
 
+3. **`PUBLIC_ORIGIN`** — `https://omnipost-ai-phi.vercel.app`. Not optional in
+   practice. Vercel invokes a cron against the *deployment* host
+   (`omnipost-<hash>-lamont718s-projects.vercel.app`), not the stable alias, so
+   without this every link and image in the email points at a one-off build URL
+   that changes on the next deploy. Set, and verified: the links read
+   `omnipost-ai-phi.vercel.app`.
+
 Optional: `DIGEST_FROM` to use your own domain once it's verified with Resend.
+
+**All three are set in production.** Two test emails have been delivered to
+`lamont@communitynyc.org`. Env vars bind at deploy time, so anything changed
+here needs a `vercel redeploy` before it takes effect.
 
 Until both are set the cron still runs, still builds the day's list, and returns
 `{"skipped": true, "reason": "RESEND_API_KEY is not set"}` — a pending state, not
