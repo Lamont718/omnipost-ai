@@ -21,6 +21,7 @@ import {
   PLATFORM_LIMIT,
   generatedImageUrl,
 } from "@/components/PostPreview";
+import { usePosted } from "@/lib/use-posted";
 
 /** Shape returned by /api/schedule. */
 interface SlotPost {
@@ -44,9 +45,13 @@ const PLATFORM_LABEL: Record<SlotPost["platform"], string> = {
 
 const PLATFORMS: SlotPost["platform"][] = ["instagram", "facebook", "linkedin", "x"];
 
-/** Locally-written captions + "posted" flags, so the tool needs no login. */
+/**
+ * Locally-written captions, so the tool needs no login. The "posted" flags used
+ * to live here too and now come from the server via usePosted — a tick made on
+ * the phone has to show up here, or the two pages tell you different things
+ * about the same post.
+ */
 const LS_CAPTIONS = "omnipost.captions";
-const LS_POSTED = "omnipost.posted";
 
 function loadLS(key: string): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -75,11 +80,10 @@ export default function CalendarPage() {
 
   // Client-side caption overrides + posted flags.
   const [localCaptions, setLocalCaptions] = useState<Record<string, string>>({});
-  const [posted, setPosted] = useState<Record<string, string>>({});
+  const { posted, toggle: togglePosted } = usePosted();
 
   useEffect(() => {
     setLocalCaptions(loadLS(LS_CAPTIONS));
-    setPosted(loadLS(LS_POSTED));
   }, []);
 
   const load = useCallback(async () => {
@@ -308,13 +312,7 @@ export default function CalendarPage() {
               setLocalCaptions(next);
               saveLS(LS_CAPTIONS, next);
             }}
-            onTogglePosted={() => {
-              const next = { ...posted };
-              if (next[selected.id]) delete next[selected.id];
-              else next[selected.id] = new Date().toISOString();
-              setPosted(next);
-              saveLS(LS_POSTED, next);
-            }}
+            onTogglePosted={() => togglePosted(selected.id)}
           />
         )}
       </div>

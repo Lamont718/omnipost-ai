@@ -5,6 +5,7 @@ import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { generatedImageUrl, PLATFORM_LIMIT } from "@/components/PostPreview";
 import { Platform } from "@/lib/types";
+import { usePosted } from "@/lib/use-posted";
 
 /**
  * The posting sheet: a work-list you get through, rather than a view you look at.
@@ -18,9 +19,11 @@ import { Platform } from "@/lib/types";
  * Deliberately not a table. A table means scrolling sideways on a phone to
  * reach the caption, and the phone is where he posts from.
  *
- * The tick shares `omnipost.posted` with the calendar, so marking something
- * here greys it out there too. Print styles are real: this page is meant to
- * survive being printed or saved as a PDF and worked through on paper.
+ * The tick is shared with the calendar and, since it moved to the server, with
+ * every other device — see lib/posted.ts. Marking something here greys it out
+ * on the phone too, which is what makes "12 of 40 posted" a number worth
+ * trusting. Print styles are real: this page is meant to survive being printed
+ * or saved as a PDF and worked through on paper.
  */
 
 interface SlotPost {
@@ -48,23 +51,12 @@ interface PublishedRecord {
   permalink?: string;
 }
 
-const LS_POSTED = "omnipost.posted";
-
 const PLATFORM_TAG: Record<Platform, string> = {
   instagram: "IG",
   facebook: "FB",
   linkedin: "LI",
   x: "X",
 };
-
-function loadPosted(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  try {
-    return JSON.parse(localStorage.getItem(LS_POSTED) || "{}");
-  } catch {
-    return {};
-  }
-}
 
 function to12h(time: string): string {
   const [h, m] = time.split(":").map(Number);
@@ -88,7 +80,7 @@ export default function SheetPage() {
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [brandSlug, setBrandSlug] = useState<string>("all");
-  const [posted, setPosted] = useState<Record<string, string>>({});
+  const { posted, toggle: togglePosted, syncError } = usePosted();
   const [hidePosted, setHidePosted] = useState(false);
   const [showPast, setShowPast] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -98,8 +90,6 @@ export default function SheetPage() {
   const [publishError, setPublishError] = useState<Record<string, string>>({});
 
   const today = format(new Date(), "yyyy-MM-dd");
-
-  useEffect(() => setPosted(loadPosted()), []);
 
   /**
    * What can actually be published, and what already has been.
@@ -170,14 +160,6 @@ export default function SheetPage() {
     () => Object.values(readiness).filter((b) => b.instagram || b.facebook || b.x).length,
     [readiness],
   );
-
-  function togglePosted(id: string) {
-    const next = { ...posted };
-    if (next[id]) delete next[id];
-    else next[id] = new Date().toISOString();
-    setPosted(next);
-    localStorage.setItem(LS_POSTED, JSON.stringify(next));
-  }
 
   function canPublish(p: SlotPost): boolean {
     const brand = readiness[p.brand.slug];
@@ -349,6 +331,31 @@ export default function SheetPage() {
             </>
           )}
         </div>
+
+        {/*
+          A tick that didn't reach the server still greys the row out here, so
+          without this the page would look like it worked and the phone would
+          disagree tomorrow. Said plainly, once.
+        */}
+        {syncError && (
+          <div
+            className="no-print"
+            style={{
+              border: "1px solid #fde68a",
+              background: "#fffbeb",
+              borderRadius: 10,
+              padding: "10px 14px",
+              margin: "0 0 16px",
+              fontSize: 12.5,
+              lineHeight: 1.6,
+              color: "#92400e",
+            }}
+          >
+            <strong>Ticks aren&apos;t saving to the server right now.</strong> They&apos;re kept in
+            this browser, so what you tick here won&apos;t show up on your phone until the
+            connection is back.
+          </div>
+        )}
 
         {/*
           Said once at the top rather than repeated as a disabled button on
