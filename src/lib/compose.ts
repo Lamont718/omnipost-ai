@@ -156,8 +156,14 @@ export async function composePost(opts: {
    * Tone only; the block below is explicit that they carry no usable facts.
    */
   examples?: string[];
+  /**
+   * True things about the brand, typed by Lamont on /facts. These ARE usable
+   * specifics — a human wrote them down deliberately, which is precisely the
+   * grounding the thin-page brands never had.
+   */
+  brandFacts?: string[];
 }): Promise<GenerateResponse> {
-  const { brand, topic, platform, toneOverride, examples } = opts;
+  const { brand, topic, platform, toneOverride, examples, brandFacts } = opts;
   const system = buildSystemPrompt(brand.name, brand.voice, platform);
 
   const parts = [`Write a ${platform} post about: ${topic.title}`];
@@ -170,6 +176,21 @@ export async function composePost(opts: {
       "VERIFIED FACTS: none available. Use no specific numbers, names, prices or feature lists.",
     );
   }
+  // Facts about the brand itself, as opposed to about this topic's page. These
+  // count as verified — he typed them — so they widen what a post is allowed to
+  // say. For a brand whose whole site yields two topics, this is the difference
+  // between ten posts that repeat and ten posts that don't.
+  if (brandFacts?.length) {
+    parts.push(
+      `VERIFIED FACTS ABOUT ${brand.name.toUpperCase()} (also usable as specifics):\n` +
+        brandFacts.map((f) => `- ${f}`).join("\n") +
+        "\n\nUse at most one or two, whichever genuinely fits the angle, and work them " +
+        "into the writing rather than listing them. They are ordered for you — prefer " +
+        "the earlier ones. Everything above about not inventing detail still applies: " +
+        "these are the only brand specifics you have.",
+    );
+  }
+
   // Rules that only bite on some topics, selected here rather than left for the
   // model to infer from the background paragraph. Matched against the title and
   // the verified facts together, because the distinguishing detail is usually in

@@ -112,6 +112,25 @@ async function candidatesFor(source: TopicSource): Promise<SitemapEntry[]> {
   return parseSitemap(xml).filter((e) => matchesSource(e.url, source));
 }
 
+/**
+ * How many distinct pages a brand can actually draw on.
+ *
+ * This is the number behind the repetition. MostHatedNBA picks 24 posts a month
+ * out of ~97 villain pages and never repeats; WWSH picks 4 out of 5 and opened
+ * three October posts with the same sentence. Same code, same prompt — the only
+ * difference is the size of the pool.
+ *
+ * Sitemap fetches are cached for an hour, and this reads no page bodies, so
+ * asking for every brand at once is cheap.
+ */
+export async function poolSizeFor(brand: Brand): Promise<number> {
+  const urls = new Set<string>();
+  for (const source of brand.sources) {
+    for (const entry of await candidatesFor(source)) urls.add(entry.url);
+  }
+  return urls.size;
+}
+
 /** Title and meta description, for context. Cheap enough at ~10 pages/week. */
 async function fetchPageMeta(
   url: string,

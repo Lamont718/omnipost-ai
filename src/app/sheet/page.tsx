@@ -307,6 +307,13 @@ export default function SheetPage() {
           >
             Print / save PDF
           </button>
+
+          <Link
+            href="/facts"
+            style={{ ...selectStyle, textDecoration: "none", fontWeight: 600 }}
+          >
+            Brand facts
+          </Link>
         </div>
 
         <div style={{ fontSize: 13, color: "#64748b", margin: "10px 0 22px", lineHeight: 1.6 }}>

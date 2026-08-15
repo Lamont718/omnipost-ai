@@ -4,6 +4,7 @@ import { brandBySlug } from "@/lib/brands";
 import { composePost } from "@/lib/compose";
 import { compactCaptions, readCaptions, writeCaptions, CaptionMap } from "@/lib/store";
 import { loadExampleBank, pickExamples } from "@/lib/examples";
+import { readAllFacts, factsForSlot } from "@/lib/facts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -101,8 +102,8 @@ export async function GET(request: Request) {
     const failures: string[] = [];
 
     // Loaded once for the whole run. A month fill writes 75 captions, and
-    // fetching this per slot would be 75 identical blob listings.
-    const exampleBank = await loadExampleBank();
+    // fetching these per slot would be 75 identical blob listings each.
+    const [exampleBank, allFacts] = await Promise.all([loadExampleBank(), readAllFacts()]);
 
     // Generate concurrently — sequential overruns the function timeout.
     await Promise.all(
@@ -115,6 +116,7 @@ export async function GET(request: Request) {
             topic: { title: slot.topic.title, context: slot.topic.context },
             platform: slot.platform,
             examples: pickExamples(exampleBank, slot.brandSlug, slot.platform),
+            brandFacts: factsForSlot(allFacts[slot.brandSlug]?.facts ?? [], slot.id),
           });
           // Store the topic with the caption, not just the caption. Topics are
           // re-derived on every read, so without this the pairing is guesswork

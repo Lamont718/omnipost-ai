@@ -3,6 +3,7 @@ import { brandBySlug } from "@/lib/brands";
 import { composePost } from "@/lib/compose";
 import { writeCaptions } from "@/lib/store";
 import { loadExampleBank, pickExamples } from "@/lib/examples";
+import { readAllFacts, factsForSlot } from "@/lib/facts";
 import { Platform } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
       platform,
       toneOverride: tone_override,
       examples: pickExamples(await loadExampleBank(), slug, platform),
+      brandFacts: factsForSlot((await readAllFacts())[slug]?.facts ?? [], id),
     });
 
     // Timestamps can't come from the runtime clock inside some contexts, but a
