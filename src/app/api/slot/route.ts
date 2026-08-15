@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { brandBySlug } from "@/lib/brands";
 import { composePost } from "@/lib/compose";
 import { writeCaptions } from "@/lib/store";
+import { loadExampleBank, pickExamples } from "@/lib/examples";
 import { Platform } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
       topic: { title: topic.title, context: topic.context },
       platform,
       toneOverride: tone_override,
+      examples: pickExamples(await loadExampleBank(), slug, platform),
     });
 
     // Timestamps can't come from the runtime clock inside some contexts, but a

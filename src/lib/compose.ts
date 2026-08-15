@@ -151,8 +151,13 @@ export async function composePost(opts: {
   topic: { title: string; context?: string };
   platform: Platform;
   toneOverride?: string;
+  /**
+   * Captions for this brand that he marked as having worked — see lib/examples.ts.
+   * Tone only; the block below is explicit that they carry no usable facts.
+   */
+  examples?: string[];
 }): Promise<GenerateResponse> {
-  const { brand, topic, platform, toneOverride } = opts;
+  const { brand, topic, platform, toneOverride, examples } = opts;
   const system = buildSystemPrompt(brand.name, brand.voice, platform);
 
   const parts = [`Write a ${platform} post about: ${topic.title}`];
@@ -178,6 +183,28 @@ export async function composePost(opts: {
       "HARD CONSTRAINTS FOR THIS TOPIC — these override everything above:\n" +
         constraints.map((c) => `- ${c.rule}`).join("\n"),
     );
+  }
+
+  // Past posts he judged to have worked. Placed after the facts and the hard
+  // constraints so nothing here can read as permission to loosen them, and
+  // fenced with an explicit warning: every fabrication in this repo's history
+  // began with the model lifting a plausible specific out of nearby text, and
+  // three real captions about other subjects is exactly that hazard.
+  if (examples?.length) {
+    parts.push(
+      "POSTS FROM THIS BRAND THAT WORKED — match their REGISTER only:\n" +
+        examples.map((e, i) => `${i + 1}. """${e}"""`).join("\n\n") +
+        "\n\nThese are here for rhythm, sentence length, how the hook opens and how " +
+        "hard the ending pushes. They are NOT facts and NOT this post's subject. Do " +
+        "not reuse their specifics, their hooks, their examples or their hashtags, " +
+        "and do not write about what they are about. Write about the topic above.",
+    );
+  }
+
+  if (examples?.length) {
+    // Worth a line in the logs: it's the only visible sign that anything the
+    // app has learned reached the thing that writes.
+    console.log(`compose: ${brand.slug} ${platform} — ${examples.length} tone example(s)`);
   }
 
   if (toneOverride) parts.push(`Tone adjustment: ${toneOverride}`);

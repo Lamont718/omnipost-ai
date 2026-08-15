@@ -6,6 +6,8 @@ import { format, parseISO } from "date-fns";
 import { generatedImageUrl, PLATFORM_LIMIT } from "@/components/PostPreview";
 import { Platform } from "@/lib/types";
 import { usePosted } from "@/lib/use-posted";
+import { useFeedback } from "@/lib/use-feedback";
+import type { Verdict } from "@/lib/feedback";
 
 /**
  * The posting sheet: a work-list you get through, rather than a view you look at.
@@ -81,6 +83,7 @@ export default function SheetPage() {
   const [month, setMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [brandSlug, setBrandSlug] = useState<string>("all");
   const { posted, toggle: togglePosted, syncError } = usePosted();
+  const { feedback, judge, count: judgedCount } = useFeedback();
   const [hidePosted, setHidePosted] = useState(false);
   const [showPast, setShowPast] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -333,6 +336,21 @@ export default function SheetPage() {
         </div>
 
         {/*
+          What the thumbs are for, said once. Without this they read as a
+          rating nobody collects — and the count is deliberately the real
+          number, including zero, rather than a promise about what it'll learn.
+        */}
+        {!loading && (
+          <div style={{ fontSize: 12.5, color: "#64748b", margin: "-12px 0 20px", lineHeight: 1.6 }}>
+            👍 on a post you&apos;ve sent teaches the next one — the captions you mark good come
+            back as tone examples when that brand is written again.{" "}
+            {judgedCount === 0
+              ? "Nothing judged yet."
+              : `${judgedCount} judged so far.`}
+          </div>
+        )}
+
+        {/*
           A tick that didn't reach the server still greys the row out here, so
           without this the page would look like it worked and the phone would
           disagree tomorrow. Said plainly, once.
@@ -425,6 +443,8 @@ export default function SheetPage() {
                 key={p.id}
                 post={p}
                 posted={!!posted[p.id]}
+                verdict={feedback[p.id]}
+                onJudge={(v) => judge(p.id, p.brand.slug, v)}
                 copied={copied === p.id}
                 onCopy={() => copyCaption(p)}
                 onToggle={() => togglePosted(p.id)}
@@ -445,6 +465,8 @@ export default function SheetPage() {
 function PostRow({
   post,
   posted,
+  verdict,
+  onJudge,
   copied,
   onCopy,
   onToggle,
@@ -456,6 +478,8 @@ function PostRow({
 }: {
   post: SlotPost;
   posted: boolean;
+  verdict?: Verdict;
+  onJudge: (verdict: Verdict) => void;
   copied: boolean;
   onCopy: () => void;
   onToggle: () => void;
@@ -671,6 +695,41 @@ function PostRow({
           >
             {posted ? "Posted ✓ — undo" : "Mark as posted"}
           </button>
+
+          {/*
+            Only once it's actually gone out. Asking "did this work?" about a
+            post nobody has sent is a question with no answer, and a row of
+            controls you can't honestly use is how a page stops being read.
+          */}
+          {(posted || live) && (
+            <span className="no-print" style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+              <span style={{ fontSize: 11.5, color: "#94a3b8" }}>did it land?</span>
+              <button
+                onClick={() => onJudge("good")}
+                title="This one worked — use it as a tone example"
+                style={{
+                  ...actionStyle,
+                  padding: "5px 9px",
+                  borderColor: verdict === "good" ? "#bbf7d0" : "#e2e8f0",
+                  background: verdict === "good" ? "#f0fdf4" : "#fff",
+                }}
+              >
+                👍
+              </button>
+              <button
+                onClick={() => onJudge("flat")}
+                title="This one fell flat"
+                style={{
+                  ...actionStyle,
+                  padding: "5px 9px",
+                  borderColor: verdict === "flat" ? "#fecaca" : "#e2e8f0",
+                  background: verdict === "flat" ? "#fef2f2" : "#fff",
+                }}
+              >
+                👎
+              </button>
+            </span>
+          )}
 
           {live?.permalink && (
             <a
