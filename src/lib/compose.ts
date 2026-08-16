@@ -1,6 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { Brand } from "./brands";
 import { Platform, VoiceProfile, GenerateResponse } from "./types";
+import { Budget, BudgetExceededError } from "./spend";
+
+/** The one place the model id lives, so pricing in spend.ts can't drift from it. */
+const MODEL = "claude-opus-4-8";
 
 /**
  * Caption writing. Shared by the on-demand API route and the weekly cron so
@@ -162,8 +166,10 @@ export async function composePost(opts: {
    * grounding the thin-page brands never had.
    */
   brandFacts?: string[];
+  /** Per-run spend ceiling. Generation throws once it is reached. */
+  budget?: Budget;
 }): Promise<GenerateResponse> {
-  const { brand, topic, platform, toneOverride, examples, brandFacts } = opts;
+  const { brand, topic, platform, toneOverride, examples, brandFacts, budget } = opts;
   const system = buildSystemPrompt(brand.name, brand.voice, platform);
 
   const parts = [`Write a ${platform} post about: ${topic.title}`];
@@ -232,7 +238,7 @@ export async function composePost(opts: {
   const userPrompt = parts.join("\n\n");
 
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: userPrompt }];
-  let best = await generate(system, messages, brand.voice);
+  let best = await generate(system, messages, brand.voice, budget);
 
   // Ask, then check. The model is told the limit up front but does overshoot,
   // and an over-limit X caption is unpostable rather than merely untidy. Hand
@@ -252,7 +258,7 @@ export async function composePost(opts: {
             `Reply with the same JSON shape.`,
         },
       );
-      const retry = await generate(system, messages, brand.voice);
+      const retry = await generate(system, messages, brand.voice, budget);
       // Keep whichever is shortest — a retry that came back longer is no use.
       if (retry.caption.length < best.caption.length) best = retry;
       if (best.caption.length <= limit) break;
@@ -275,15 +281,24 @@ async function generate(
   system: string,
   messages: Anthropic.MessageParam[],
   voice: VoiceProfile,
+  budget?: Budget,
 ): Promise<GenerateResponse> {
+  // Checked before the request, not after: the point is to stop new spending,
+  // and a check on the way out would only ever report a bill already incurred.
+  if (budget?.exceeded()) {
+    throw new BudgetExceededError(budget.spent(), budget.limit);
+  }
+
   const message = await anthropic().messages.create({
-    model: "claude-opus-4-8",
+    model: MODEL,
     max_tokens: 4096,
     thinking: { type: "adaptive" },
     output_config: { effort: "medium" },
     system,
     messages,
   });
+
+  budget?.record(MODEL, message.usage);
 
   // With adaptive thinking, content[0] may be a thinking block.
   const block = message.content.find((b) => b.type === "text");

@@ -5,6 +5,7 @@ import { composePost } from "@/lib/compose";
 import { compactCaptions, readCaptions, writeCaptions, CaptionMap } from "@/lib/store";
 import { loadExampleBank, pickExamples } from "@/lib/examples";
 import { readAllFacts, factsForSlot } from "@/lib/facts";
+import { createBudget, estimateRun, DEFAULT_RUN_BUDGET_USD } from "@/lib/spend";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,13 @@ export const maxDuration = 300;
  *   One brand only:      …&brand=yodm
  *   N days ahead:        …&days=14
  *   From a given day:    …&start=2026-09-06&days=28
+ *   Raise the cap:       …&budget=10        (dollars; default 5)
+ *
+ * Every run is capped. It refuses up front if the slot count would cost more
+ * than the budget, and stops mid-run if the real spend gets there anyway; the
+ * response always reports `spentUsd`. A full month for every brand is about 57
+ * slots and $0.86, so the default only ever bites on something that has gone
+ * wrong.
  *
  * `days` is capped at 31 and counted from `start` (today by default), so filling
  * a month that doesn't begin today — catching up the back half of September, say
@@ -105,32 +113,64 @@ export async function GET(request: Request) {
     // fetching these per slot would be 75 identical blob listings each.
     const [exampleBank, allFacts] = await Promise.all([loadExampleBank(), readAllFacts()]);
 
-    // Generate concurrently — sequential overruns the function timeout.
-    await Promise.all(
-      slots.map(async (slot) => {
-        const brand = brandBySlug(slot.brandSlug);
-        if (!brand) return;
-        try {
-          const post = await composePost({
-            brand,
-            topic: { title: slot.topic.title, context: slot.topic.context },
-            platform: slot.platform,
-            examples: pickExamples(exampleBank, slot.brandSlug, slot.platform),
-            brandFacts: factsForSlot(allFacts[slot.brandSlug]?.facts ?? [], slot.id),
-          });
-          // Store the topic with the caption, not just the caption. Topics are
-          // re-derived on every read, so without this the pairing is guesswork
-          // the next time a sitemap or a source rule changes.
-          captions[slot.id] = {
-            ...post,
-            generatedAt: new Date().toISOString(),
-            topic: slot.topic,
-          };
-        } catch (err) {
-          failures.push(`${slot.brandSlug} ${slot.date}: ${err instanceof Error ? err.message : err}`);
-        }
-      }),
-    );
+    // A ceiling on this run. `?budget=` raises it for a deliberately large fill.
+    const budget = createBudget(Number(params.get("budget")) || DEFAULT_RUN_BUDGET_USD);
+
+    // Refuse an oversized run before spending anything. This is the guard that
+    // actually catches a runaway — a bad `days`, a caller filling a year — and
+    // it has to happen here, because once generation starts the answer costs
+    // money to discover.
+    const estimate = estimateRun(slots.length);
+    if (estimate > budget.limit) {
+      return NextResponse.json(
+        {
+          error: "run would exceed its budget",
+          slots: slots.length,
+          estimatedUsd: estimate,
+          budgetUsd: budget.limit,
+          hint: "raise it deliberately with &budget=<dollars>, or narrow the range",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Generated concurrently — sequential overruns the function timeout — but
+    // in chunks rather than all at once, because the running cap is only real
+    // if something records a cost before the next batch decides to start. With
+    // one flat Promise.all every slot checks the budget while the total is
+    // still zero, and a cap that every caller passes is not a cap.
+    const CONCURRENCY = 12;
+    for (let i = 0; i < slots.length; i += CONCURRENCY) {
+      if (budget.exceeded()) break;
+      await Promise.all(
+        slots.slice(i, i + CONCURRENCY).map(async (slot) => {
+          const brand = brandBySlug(slot.brandSlug);
+          if (!brand) return;
+          try {
+            const post = await composePost({
+              brand,
+              topic: { title: slot.topic.title, context: slot.topic.context },
+              platform: slot.platform,
+              examples: pickExamples(exampleBank, slot.brandSlug, slot.platform),
+              brandFacts: factsForSlot(allFacts[slot.brandSlug]?.facts ?? [], slot.id),
+              budget,
+            });
+            // Store the topic with the caption, not just the caption. Topics are
+            // re-derived on every read, so without this the pairing is guesswork
+            // the next time a sitemap or a source rule changes.
+            captions[slot.id] = {
+              ...post,
+              generatedAt: new Date().toISOString(),
+              topic: slot.topic,
+            };
+          } catch (err) {
+            failures.push(
+              `${slot.brandSlug} ${slot.date}: ${err instanceof Error ? err.message : err}`,
+            );
+          }
+        }),
+      );
+    }
 
     if (preview) {
       return NextResponse.json({
@@ -138,6 +178,9 @@ export async function GET(request: Request) {
         range: { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) },
         generated: Object.keys(captions).length,
         skipped,
+        spentUsd: budget.spent(),
+        budgetUsd: budget.limit,
+        budgetReached: budget.exceeded(),
         failures,
         sample: slots.slice(0, 20).map((s) => ({
           date: s.date,
@@ -164,6 +207,12 @@ export async function GET(request: Request) {
       storedTotal: result.total,
       partsCompacted: result.partsCleared,
       partsKept: result.partsKept,
+      // Reported on every run, not only when it trips. A cap nobody can see
+      // the reading of is a cap nobody trusts — and this is also the only
+      // place the real cost of a fill has ever been visible.
+      spentUsd: budget.spent(),
+      budgetUsd: budget.limit,
+      budgetReached: budget.exceeded(),
       failures,
       note: result.total === 0 ? "BLOB_READ_WRITE_TOKEN not set — nothing saved" : undefined,
     });

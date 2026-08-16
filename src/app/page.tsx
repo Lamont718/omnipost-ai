@@ -5,6 +5,30 @@ import { activeBrands } from "@/lib/brands";
 // can never drift from what the app really posts for.
 const ORGS = activeBrands();
 
+/**
+ * The platforms the live schedules actually use, derived rather than listed.
+ *
+ * The hardcoded version said "Instagram, Facebook, LinkedIn, and X" and was
+ * wrong twice over: no brand has ever scheduled LinkedIn, and every Facebook
+ * slot was removed in August once it was clear there are no Pages to post to.
+ * Same failure as the brand list that advertised three dead brands — so this
+ * one computes itself.
+ */
+const PLATFORM_LABELS: Record<string, string> = {
+  instagram: "Instagram",
+  facebook: "Facebook",
+  linkedin: "LinkedIn",
+  x: "X",
+};
+const LIVE_PLATFORMS = Array.from(
+  new Set(ORGS.flatMap((b) => b.schedule.map((s) => s.platform))),
+).map((p) => PLATFORM_LABELS[p] ?? p);
+
+function listPhrase(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
 const FEATURES = [
   {
     title: "AI Brand Voice Engine",
@@ -16,8 +40,11 @@ const FEATURES = [
     ),
   },
   {
-    title: "Approval Queue",
-    desc: "Every AI-generated post goes through review before publishing. Approve, reject, or edit inline. Bulk approve when you're confident.",
+    // Was "Approval Queue", describing a Supabase-backed review flow that has
+    // not existed since the July rebuild. The posting sheet is what actually
+    // stands between a written post and a posted one.
+    title: "The posting sheet",
+    desc: "One column in send order: the caption with a Copy button, the picture with a Save button, and a tick when it's done. The day's list also arrives by email at 8am so you don't have to remember to look.",
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -34,8 +61,10 @@ const FEATURES = [
     ),
   },
   {
-    title: "Multi-Platform Ready",
-    desc: "Generate content optimized for Instagram, Facebook, LinkedIn, and X. Each platform gets tailored formatting and tone.",
+    title: "Written for the platform",
+    desc: `Every post is shaped for where it's going — currently ${listPhrase(
+      LIVE_PLATFORMS,
+    )}. X posts are held under 280 characters at the point they're written, not flagged afterwards.`,
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
@@ -53,11 +82,17 @@ export default function HomePage() {
           <h1 className="text-xl font-bold text-gray-900 tracking-tight">
             OmniPost <span className="text-brand-500">AI</span>
           </h1>
+          {/*
+            Said "Sign In" and went to the calendar. There is no sign-in — the
+            Supabase auth this promised died in July, and the calendar
+            deliberately has no AuthGuard. A button that names something the app
+            can't do is how a page stops being believed.
+          */}
           <Link
-            href="/calendar"
+            href="/sheet"
             className="bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition"
           >
-            Sign In
+            Today&apos;s posts
           </Link>
         </div>
       </nav>
@@ -173,20 +208,25 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
+              // Rewritten to describe what the app does now. The old three
+              // steps — pick an org, type a topic, approve it in a queue —
+              // described the flow that died with Supabase in July, and the
+              // middle one was never true again: topics come from each brand's
+              // own sitemap, so a topic is never typed.
               {
                 step: "01",
-                title: "Select your organization",
-                desc: "Choose which brand you're creating for. The AI loads that org's complete voice profile.",
+                title: "It picks the topics",
+                desc: "Every week it reads each brand's own sitemap and chooses what to write about — a real card, a real lesson, a real page. You never type a topic.",
               },
               {
                 step: "02",
-                title: "Enter a topic",
-                desc: "Tell the AI what the post should be about. It handles tone, hashtags, and platform formatting.",
+                title: "It writes and illustrates",
+                desc: "A caption in that brand's voice, grounded in what the page actually says, with the right picture attached. Months ahead of when it's needed.",
               },
               {
                 step: "03",
-                title: "Review and approve",
-                desc: "Every post goes through your approval queue. Edit, approve, or reject before anything goes live.",
+                title: "You post it",
+                desc: "Copy the words, save the picture, tick it off. Marking a post good teaches the next one; the tick follows you between your phone and your laptop.",
               },
             ].map((item) => (
               <div key={item.step} className="text-center">
