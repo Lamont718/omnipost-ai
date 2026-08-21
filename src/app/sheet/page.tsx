@@ -36,7 +36,11 @@ interface SlotPost {
   brand: { slug: string; name: string; colorHex: string };
   topic: { title: string; url?: string; source: string };
   caption: string | null;
+  /** Always a still — the poster frame when this post is a Reel. */
   image?: string | null;
+  /** The clip itself, when this post is a Reel. */
+  video?: string | null;
+  videoDescribes?: string | null;
 }
 
 /** What /api/publish reports about a brand's connected accounts. */
@@ -498,8 +502,10 @@ function PostRow({
 }) {
   const caption = post.caption ?? "";
   const imageUrl = post.image ?? generatedImageUrl(post.brand.slug, caption);
-  const downloadHref = imageUrl
-    ? `/api/download?url=${encodeURIComponent(imageUrl)}&name=${encodeURIComponent(
+  // A Reel: the clip is the thing to save, the still is only its poster.
+  const mediaUrl = post.video ?? imageUrl;
+  const downloadHref = mediaUrl
+    ? `/api/download?url=${encodeURIComponent(mediaUrl)}&name=${encodeURIComponent(
         `${post.brand.slug}-${post.date}-${post.platform}`,
       )}`
     : null;
@@ -524,9 +530,31 @@ function PostRow({
         opacity: posted || live ? 0.55 : 1,
       }}
     >
-      {/* Picture */}
+      {/* Picture, or the clip when this one is a Reel */}
       <div style={{ flex: "0 0 auto", width: 108 }}>
-        {imageUrl ? (
+        {post.video ? (
+          <video
+            src={post.video}
+            // Without a poster a <video> is a blank box until it decodes, which
+            // reads as "there's nothing here" — the exact complaint the Emeka
+            // home page got. The poster is a real frame of this clip.
+            poster={imageUrl ?? undefined}
+            controls
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            style={{
+              width: 108,
+              height: 192,
+              // Same rule as the stills: fit the whole frame, never crop it.
+              objectFit: "contain",
+              borderRadius: 8,
+              background: "#f1f5f9",
+              display: "block",
+            }}
+          />
+        ) : imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imageUrl}
@@ -580,8 +608,25 @@ function PostRow({
               padding: "5px 0",
             }}
           >
-            Save image
+            {post.video ? "Save video" : "Save image"}
           </a>
+        )}
+        {post.video && (
+          // The clips have no audio track at all. Instagram will offer music on
+          // upload, but only if he knows to expect silence rather than assuming
+          // the file is broken.
+          <p
+            className="no-print"
+            style={{
+              margin: "6px 0 0",
+              fontSize: 10.5,
+              lineHeight: 1.35,
+              color: "#94a3b8",
+              textAlign: "center",
+            }}
+          >
+            Reel · silent — add music in Instagram
+          </p>
         )}
       </div>
 
@@ -606,7 +651,9 @@ function PostRow({
               padding: "2px 7px",
             }}
           >
-            {PLATFORM_TAG[post.platform]}
+            {post.video && post.platform === "instagram"
+              ? "REEL"
+              : PLATFORM_TAG[post.platform]}
           </span>
           <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0f172a" }}>
             {post.brand.name}

@@ -5,6 +5,12 @@ import { composePost } from "@/lib/compose";
 import { compactCaptions, readCaptions, writeCaptions, CaptionMap } from "@/lib/store";
 import { loadExampleBank, pickExamples } from "@/lib/examples";
 import { readAllFacts, factsForSlot } from "@/lib/facts";
+import {
+  videosFor,
+  pickVideoForSlot,
+  pinnable,
+  platformPlaysVideo,
+} from "@/lib/video-library";
 import { createBudget, estimateRun, DEFAULT_RUN_BUDGET_USD } from "@/lib/spend";
 
 export const runtime = "nodejs";
@@ -113,6 +119,16 @@ export async function GET(request: Request) {
     // fetching these per slot would be 75 identical blob listings each.
     const [exampleBank, allFacts] = await Promise.all([loadExampleBank(), readAllFacts()]);
 
+    // Clip libraries, one listing per brand in the run rather than one per slot.
+    // A month fill for a brand with video is 13 slots; without this it would be
+    // 13 identical blob listings.
+    const videoBrands = Array.from(new Set(slots.map((s) => s.brandSlug)));
+    const videos = new Map(
+      await Promise.all(
+        videoBrands.map(async (slug) => [slug, await videosFor(slug)] as const),
+      ),
+    );
+
     // A ceiling on this run. `?budget=` raises it for a deliberately large fill.
     const budget = createBudget(Number(params.get("budget")) || DEFAULT_RUN_BUDGET_USD);
 
@@ -147,6 +163,13 @@ export async function GET(request: Request) {
           const brand = brandBySlug(slot.brandSlug);
           if (!brand) return;
           try {
+            const clip = platformPlaysVideo(slot.platform)
+              ? pickVideoForSlot(
+                  videos.get(slot.brandSlug) ?? [],
+                  slot.id,
+                  slot.topic.url ?? slot.topic.title,
+                )
+              : null;
             const post = await composePost({
               brand,
               topic: { title: slot.topic.title, context: slot.topic.context },
@@ -154,6 +177,7 @@ export async function GET(request: Request) {
               examples: pickExamples(exampleBank, slot.brandSlug, slot.platform),
               brandFacts: factsForSlot(allFacts[slot.brandSlug]?.facts ?? [], slot.id),
               budget,
+              media: clip ? { kind: "video", describes: clip.describes } : undefined,
             });
             // Store the topic with the caption, not just the caption. Topics are
             // re-derived on every read, so without this the pairing is guesswork
@@ -162,6 +186,9 @@ export async function GET(request: Request) {
               ...post,
               generatedAt: new Date().toISOString(),
               topic: slot.topic,
+              // Pinned for the same reason as the topic: what the caption was
+              // written against is the thing worth keeping.
+              ...(clip ? { video: pinnable(clip) } : {}),
             };
           } catch (err) {
             failures.push(

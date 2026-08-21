@@ -1,5 +1,6 @@
 import { GenerateResponse } from "./types";
 import type { Topic } from "./sources";
+import type { PinnedVideo } from "./video-library";
 
 /**
  * Where written captions live between generation and the calendar that shows them.
@@ -72,6 +73,21 @@ export interface StoredCaption extends GenerateResponse {
    * fall back to the derived topic, exactly as before.
    */
   topic?: Topic;
+  /**
+   * The video clip this caption was written against, frozen the same way and
+   * for the same reason.
+   *
+   * A Reel caption is composed knowing what is on screen — it is told the clip
+   * shows Emeka at a spacecraft window, and it writes a first line that lands
+   * against that. Re-picking the clip on every read would eventually hand that
+   * caption a different five seconds, and the pairing the writer was working to
+   * would quietly stop being true. Adding clips still re-rotates every slot
+   * nobody has written yet, which is the behaviour worth keeping.
+   *
+   * Absent on captions written before video existed, and on every brand that
+   * has no clips: those posts carry a still, exactly as before.
+   */
+  video?: PinnedVideo;
 }
 
 export type CaptionMap = Record<string, StoredCaption>;

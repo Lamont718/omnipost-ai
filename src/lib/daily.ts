@@ -124,6 +124,15 @@ function renderPost(p: SlotView, origin: string): string {
   const caption = p.caption ?? "";
   const deepLink = `${origin}/calendar?post=${encodeURIComponent(p.id)}`;
 
+  // No email client plays video, so a Reel shows its poster frame and links to
+  // the file itself. Same-origin through /api/download, which is what makes a
+  // phone save an .mp4 rather than open a tab it can do nothing with.
+  const clipLink = p.video
+    ? `${origin}/api/download?url=${encodeURIComponent(p.video)}&name=${encodeURIComponent(
+        `${p.brand.slug}-${p.date}-${p.platform}`,
+      )}`
+    : null;
+
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-left:3px solid ${escapeHtml(
     p.brand.colorHex,
@@ -134,7 +143,7 @@ function renderPost(p: SlotView, origin: string): string {
           <span style="background:${escapeHtml(
             p.brand.colorHex,
           )};color:#ffffff;border-radius:5px;padding:2px 7px;font-weight:700;">${escapeHtml(
-            PLATFORM_NAME[p.platform],
+            p.video && p.platform === "instagram" ? "Reel" : PLATFORM_NAME[p.platform],
           )}</span>
           &nbsp;${escapeHtml(p.brand.name)}
           <span style="color:#94a3b8;font-weight:400;">&nbsp;·&nbsp;${escapeHtml(
@@ -144,9 +153,20 @@ function renderPost(p: SlotView, origin: string): string {
 
         ${
           p.image
-            ? `<div style="margin:0 0 10px;"><img src="${escapeHtml(
-                p.image,
-              )}" alt="${escapeHtml(p.imageAlt ?? p.topic.title)}" width="150" style="width:150px;max-width:100%;border-radius:8px;background:#f1f5f9;display:block;" /></div>`
+            ? `<div style="margin:0 0 10px;">${
+                clipLink ? `<a href="${escapeHtml(clipLink)}">` : ""
+              }<img src="${escapeHtml(p.image)}" alt="${escapeHtml(
+                p.imageAlt ?? p.topic.title,
+              )}" width="150" style="width:150px;max-width:100%;border-radius:8px;background:#f1f5f9;display:block;" />${
+                clipLink ? "</a>" : ""
+              }</div>`
+            : ""
+        }
+        ${
+          clipLink
+            ? `<div style="font:600 12px/1.6 ${SANS};color:#4f46e5;margin:0 0 10px;"><a href="${escapeHtml(
+                clipLink,
+              )}" style="color:#4f46e5;text-decoration:none;">Save the clip &darr;</a><span style="color:#94a3b8;font-weight:400;">&nbsp;&middot;&nbsp;5s, silent &mdash; add music in Instagram</span></div>`
             : ""
         }
 

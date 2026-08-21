@@ -238,11 +238,13 @@ function MediaSlot({
   topic,
   caption,
   imageUrl,
+  videoUrl,
 }: {
   brand: PreviewBrand;
   topic: PreviewTopic;
   caption?: string;
   imageUrl?: string | null;
+  videoUrl?: string | null;
 }) {
   const { src: image, generated } = useTopicImage(
     topic.url,
@@ -251,6 +253,48 @@ function MediaSlot({
   );
   /** Width ÷ height of the loaded artwork, once the browser knows it. */
   const [ratio, setRatio] = useState<number | null>(null);
+
+  // A Reel is not a square post with a video in it. It fills the screen at
+  // 9:16, so the preview has to be that shape or it tells him the wrong thing
+  // about how much of the frame he actually has.
+  if (videoUrl) {
+    return (
+      <div style={{ position: "relative", background: "#000" }}>
+        <video
+          src={videoUrl}
+          poster={image ?? undefined}
+          controls
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          style={{
+            width: "100%",
+            aspectRatio: "9 / 16",
+            objectFit: "contain",
+            display: "block",
+            background: "#000",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            fontSize: 10,
+            letterSpacing: 1,
+            textTransform: "uppercase",
+            color: "#fff",
+            background: "rgba(0,0,0,.55)",
+            borderRadius: 999,
+            padding: "3px 9px",
+          }}
+        >
+          Reel · no sound
+        </div>
+      </div>
+    );
+  }
 
   if (image) {
     // These are 1.91:1 share cards; an Instagram post is square. Letterbox
@@ -384,9 +428,11 @@ interface ShellProps {
   when: string;
   /** The brand's own artwork for this slot, when it has a library. */
   imageUrl?: string | null;
+  /** The clip, when this slot is a Reel. `imageUrl` is then its poster. */
+  videoUrl?: string | null;
 }
 
-function InstagramPost({ brand, topic, caption, when, imageUrl }: ShellProps) {
+function InstagramPost({ brand, topic, caption, when, imageUrl, videoUrl }: ShellProps) {
   return (
     <Card>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
@@ -397,7 +443,13 @@ function InstagramPost({ brand, topic, caption, when, imageUrl }: ShellProps) {
         <div style={{ color: "#262626", letterSpacing: 2, fontSize: 14 }}>•••</div>
       </div>
 
-      <MediaSlot brand={brand} topic={topic} caption={caption} imageUrl={imageUrl} />
+      <MediaSlot
+        brand={brand}
+        topic={topic}
+        caption={caption}
+        imageUrl={imageUrl}
+        videoUrl={videoUrl}
+      />
 
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 12px 6px", color: "#262626" }}>
         {ico(HEART)}
@@ -621,6 +673,7 @@ export function PostPreview({
   caption,
   when = "now",
   imageUrl,
+  videoUrl,
 }: {
   platform: Platform;
   brand: PreviewBrand;
@@ -628,8 +681,9 @@ export function PostPreview({
   caption: string;
   when?: string;
   imageUrl?: string | null;
+  videoUrl?: string | null;
 }) {
-  const props = { brand, topic, caption, when, imageUrl };
+  const props = { brand, topic, caption, when, imageUrl, videoUrl };
   switch (platform) {
     case "instagram":
       return <InstagramPost {...props} />;

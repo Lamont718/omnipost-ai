@@ -1,5 +1,6 @@
 import { brandBySlug } from "../brands";
 import { libraryFor } from "../library";
+import { videosFor } from "../video-library";
 import { resolveArtwork, shareImagesForTopics } from "../post-artwork";
 import { scheduledPostsInRange, withPinnedTopics } from "../schedule";
 import { readCaptions } from "../store";
@@ -86,11 +87,15 @@ async function resolvePost(id: string, origin: string) {
   const caption = captions[id]?.caption ?? null;
   if (!caption) throw new Error("that slot has no caption yet");
 
-  const [library, shareImages] = await Promise.all([
+  const [library, videos, shareImages] = await Promise.all([
     libraryFor(brandSlug),
+    videosFor(brandSlug),
     shareImagesForTopics([{ brand, topic: post.topic }]),
   ]);
 
+  // Resolved with the clips, not without them. Leaving them out would not have
+  // failed — it would have quietly resolved the still underneath and published
+  // a photo of a post he was looking at as a Reel, which is worse than an error.
   const artwork = resolveArtwork({
     brand,
     slotId: id,
@@ -99,6 +104,9 @@ async function resolvePost(id: string, origin: string) {
     origin,
     library,
     shareImages,
+    platform: post.platform,
+    videos,
+    pinnedVideo: captions[id]?.video ?? null,
   });
 
   return { brand, post, caption, artwork };
@@ -137,6 +145,21 @@ export async function publishSlot(id: string, origin: string): Promise<PublishOu
 
   if (!isPublishable(platform)) {
     return { id, published: false, error: `${platform} publishing isn't supported` };
+  }
+
+  // Reels are not wired. Publishing a video through the Instagram API is a
+  // different call — a REELS container, then polling until Meta finishes
+  // processing it — and none of that is built. The important part is that this
+  // refuses instead of falling through: the image path would happily post the
+  // poster frame, so a post he is looking at as a video would go out as a
+  // still, with a caption written for a video. He posts these by hand anyway.
+  if (artwork.kind === "video") {
+    return {
+      id,
+      published: false,
+      error:
+        "this one is a video — Reels aren't wired up, so save the clip and post it by hand",
+    };
   }
 
   const limit = PLATFORM_LIMIT[platform as keyof typeof PLATFORM_LIMIT];

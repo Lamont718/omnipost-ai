@@ -1,6 +1,7 @@
 import { scheduledPostsInRange, withPinnedTopics } from "./schedule";
 import { readCaptions } from "./store";
 import { libraryFor } from "./library";
+import { videosFor } from "./video-library";
 import { brandBySlug } from "./brands";
 import { resolveArtwork, shareImagesForTopics } from "./post-artwork";
 import type { Platform } from "./types";
@@ -28,9 +29,14 @@ export interface SlotView {
   brand: { slug: string; name: string; colorHex: string };
   topic: Topic;
   caption: string | null;
+  /** Always a still: the poster frame when the post carries a clip. */
   image: string | null;
   imageAlt: string | null;
   imageSource: string | null;
+  /** The clip itself, when this post is a Reel. Null for a picture post. */
+  video: string | null;
+  /** What the clip shows, so a surface can label it honestly. */
+  videoDescribes: string | null;
 }
 
 export async function buildSlotViews(start: Date, end: Date): Promise<SlotView[]> {
@@ -47,6 +53,10 @@ export async function buildSlotViews(start: Date, end: Date): Promise<SlotView[]
   const slugs = Array.from(new Set(posts.map((p) => p.brandSlug)));
   const libraries = new Map(
     await Promise.all(slugs.map(async (slug) => [slug, await libraryFor(slug)] as const)),
+  );
+  // Same shape, same reason: one listing per brand on screen, not one per post.
+  const videos = new Map(
+    await Promise.all(slugs.map(async (slug) => [slug, await videosFor(slug)] as const)),
   );
 
   // The topic pages' own share images — a villain portrait, a YODM card —
@@ -70,6 +80,9 @@ export async function buildSlotViews(start: Date, end: Date): Promise<SlotView[]
             caption,
             library: libraries.get(p.brandSlug) ?? [],
             shareImages,
+            platform: p.platform,
+            videos: videos.get(p.brandSlug) ?? [],
+            pinnedVideo: captions[p.id]?.video ?? null,
           })
         : null;
 
@@ -86,6 +99,8 @@ export async function buildSlotViews(start: Date, end: Date): Promise<SlotView[]
       image: artwork?.url ?? null,
       imageAlt: artwork?.alt ?? null,
       imageSource: artwork?.source ?? null,
+      video: artwork?.videoUrl ?? null,
+      videoDescribes: artwork?.videoDescribes ?? null,
     };
   });
 }

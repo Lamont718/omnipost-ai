@@ -34,6 +34,9 @@ interface SlotPost {
   caption: string | null;
   /** The brand's own artwork for this slot, when it has a library. */
   image?: string | null;
+  /** The clip, when this slot is a Reel. `image` is then its poster frame. */
+  video?: string | null;
+  videoDescribes?: string | null;
 }
 
 const PLATFORM_LABEL: Record<SlotPost["platform"], string> = {
@@ -424,7 +427,8 @@ function MetricoolExport({
       <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 8 }}>
         Metricool recommends importing 50 posts at a time — a ⚠ means that file is over.
         Every row carries a public image URL; leave &quot;Import as drafts&quot; on for the first
-        run so you can check them in Metricool before anything goes out.
+        run so you can check them in Metricool before anything goes out. Reels are not in
+        these files — their CSV has no column for a clip — so post those from the sheet.
       </div>
     </div>
   );
@@ -502,8 +506,11 @@ function PostDetail({
   const imageUrl =
     post.image ?? (caption ? generatedImageUrl(post.brand.slug, caption) : null);
 
-  const downloadHref = imageUrl
-    ? `/api/download?url=${encodeURIComponent(imageUrl)}&name=${encodeURIComponent(
+  // On a Reel the clip is what he needs on his phone; the still is its poster.
+  const mediaUrl = post.video ?? imageUrl;
+
+  const downloadHref = mediaUrl
+    ? `/api/download?url=${encodeURIComponent(mediaUrl)}&name=${encodeURIComponent(
         `${post.brand.slug}-${post.date}-${post.platform}`,
       )}`
     : null;
@@ -587,6 +594,7 @@ function PostDetail({
               // is the file you just looked at — including right after a
               // Rewrite, when the stored picture hasn't caught up yet.
               imageUrl={imageUrl}
+              videoUrl={post.video}
             />
           ) : (
             <EmptyPreview platform={view} brand={post.brand} />
@@ -613,7 +621,7 @@ function PostDetail({
           )}
           {caption && downloadHref && (
             <a href={downloadHref} download style={{ ...secondaryBtn, textDecoration: "none" }}>
-              Save image
+              {post.video ? "Save video" : "Save image"}
             </a>
           )}
           <button onClick={onTogglePosted} style={secondaryBtn}>

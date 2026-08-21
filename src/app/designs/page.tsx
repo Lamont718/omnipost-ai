@@ -31,6 +31,8 @@ interface SlotPost {
   topic: { title: string; context?: string; url?: string; source: string };
   caption: string | null;
   image?: string | null;
+  /** The clip, when this slot is a Reel. `image` is then its poster frame. */
+  video?: string | null;
 }
 
 const PLATFORMS: Platform[] = ["instagram", "facebook", "linkedin", "x"];
@@ -188,6 +190,7 @@ export default function DesignsPage() {
                       caption={slot.caption}
                       when={format(new Date(slot.date + "T00:00"), "MMM d")}
                       imageUrl={slot.image}
+                      videoUrl={slot.video}
                     />
                   ) : (
                     <EmptyPreview platform={pf} brand={brand} />

@@ -34,14 +34,35 @@ function emojiRule(style: VoiceProfile["emoji_style"]): string {
   }
 }
 
-function platformRule(platform: Platform): string {
+/**
+ * What the post carries. A Reel is written differently from a photo post, and
+ * the difference is not decorative: on a Reel the first line is the only line
+ * most people read before "more", and it is the line that decides whether a
+ * stranger stays.
+ */
+export interface PostMedia {
+  kind: "image" | "video";
+  /** What the clip shows. Only ever text a human wrote down — see brands.ts. */
+  describes?: string;
+}
+
+function platformRule(platform: Platform, media?: PostMedia): string {
   switch (platform) {
     case "linkedin":
       return "Write 2-3 short paragraphs. Professional tone. No emojis. End with a professional close.";
     case "x":
-      return "Keep it under 280 characters including hashtags. Punchy and shareable.";
+      return media?.kind === "video"
+        ? "Keep it under 280 characters including hashtags. Punchy and shareable. A short video is attached — do not describe it."
+        : "Keep it under 280 characters including hashtags. Punchy and shareable.";
     case "instagram":
-      return "Visual storytelling tone. The caption should complement an image, not describe it.";
+      return media?.kind === "video"
+        ? [
+            "This post is an Instagram REEL: a short silent video, not a photo.",
+            "Front-load the hook. The first line is the only line most people see before the caption is cut off by “more”, so it has to work completely on its own and give a stranger a reason to stop.",
+            "Keep it tighter than a photo caption — the video is doing the looking.",
+            "Never tell anyone to look at, swipe, or tap the picture.",
+          ].join(" ")
+        : "Visual storytelling tone. The caption should complement an image, not describe it.";
     case "facebook":
       return "Conversational and community-oriented. Can run slightly longer.";
   }
@@ -69,6 +90,7 @@ function buildSystemPrompt(
   brandName: string,
   voice: VoiceProfile,
   platform: Platform,
+  media?: PostMedia,
 ): string {
   return `You are the social media voice for ${brandName}. You write authentic, purpose-driven social media content.
 
@@ -85,7 +107,7 @@ PREFERRED HASHTAGS: ${voice.hashtags.join(" ")}
 ${voice.keywords?.length ? `KEY TOPICS: ${voice.keywords.join(", ")}` : ""}
 
 PLATFORM: ${platform}
-${platformRule(platform)}
+${platformRule(platform, media)}
 
 CONTENT RULES (non-negotiable):
 1. Never use generic motivational filler like "Every day is a chance to..." or "In a world where..."
@@ -168,9 +190,18 @@ export async function composePost(opts: {
   brandFacts?: string[];
   /** Per-run spend ceiling. Generation throws once it is reached. */
   budget?: Budget;
+  /**
+   * The picture or clip this post will carry, decided before it is written.
+   *
+   * A caption written blind and then handed a video is a caption that will
+   * sooner or later describe the wrong five seconds, which is the same failure
+   * as a caption re-paired with the wrong topic.
+   */
+  media?: PostMedia;
 }): Promise<GenerateResponse> {
-  const { brand, topic, platform, toneOverride, examples, brandFacts, budget } = opts;
-  const system = buildSystemPrompt(brand.name, brand.voice, platform);
+  const { brand, topic, platform, toneOverride, examples, brandFacts, budget, media } =
+    opts;
+  const system = buildSystemPrompt(brand.name, brand.voice, platform, media);
 
   const parts = [`Write a ${platform} post about: ${topic.title}`];
   if (topic.context) {
@@ -182,6 +213,32 @@ export async function composePost(opts: {
       "VERIFIED FACTS: none available. Use no specific numbers, names, prices or feature lists.",
     );
   }
+  // What is on screen. Placed with the facts because that is what it is: a
+  // sentence a human wrote after watching the clip. The prohibition matters as
+  // much as the description — an illustrated character next to a post about a
+  // real aviator is fine, and "watch her take to the sky" is not, because it
+  // tells a reader the video shows something it does not.
+  if (media?.kind === "video") {
+    parts.push(
+      media.describes
+        ? `THE VIDEO ON THIS POST (about five seconds, silent, illustrated):
+"""
+${media.describes}
+"""
+
+` +
+            "That is the brand's own illustrated character, not footage of anything in " +
+            "the topic. It does not show any real person, place or event named in this " +
+            "post, and it is not evidence of anything. Do not narrate it, do not write " +
+            '"watch her…" or "see the moment…", and never imply the clip depicts the ' +
+            "subject. The video is what makes someone stop scrolling; the caption carries " +
+            "the meaning. Write a first line that works whether or not it plays."
+        : "THE VIDEO ON THIS POST: a short silent clip of the brand's own illustrated " +
+            "character. You have not been told what it shows, so do not refer to it at " +
+            "all — write a caption that stands on its own.",
+    );
+  }
+
   // Facts about the brand itself, as opposed to about this topic's page. These
   // count as verified — he typed them — so they widen what a post is allowed to
   // say. For a brand whose whole site yields two topics, this is the difference

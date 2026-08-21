@@ -3,6 +3,7 @@ import { scheduledPostsInRange, withPinnedTopics } from "@/lib/schedule";
 import { readCaptions } from "@/lib/store";
 import { brandBySlug } from "@/lib/brands";
 import { libraryFor } from "@/lib/library";
+import { videosFor } from "@/lib/video-library";
 import { resolveArtwork, shareImagesForTopics } from "@/lib/post-artwork";
 import { toMetricoolCsv, ExportPost, RECOMMENDED_MAX_ROWS } from "@/lib/metricool";
 
@@ -22,6 +23,13 @@ export const dynamic = "force-dynamic";
  *
  * Only posts that have actually been written are exported — a row with no text
  * is a post Metricool would schedule as an empty message.
+ *
+ * Reels are left out, and counted in the X-Skipped-Video-Rows header rather
+ * than dropped quietly. Metricool's import template carries "Picture Url 1" and
+ * their documentation describes images; there is no column this app can put a
+ * clip in and be sure of. Exporting the poster frame instead would be worse
+ * than omitting the row, because the CSV would schedule a photo post carrying a
+ * caption written for a video, and nothing downstream would ever say so.
  */
 
 function monthRange(month: string): { start: Date; end: Date } | null {
@@ -80,11 +88,18 @@ export async function GET(request: NextRequest) {
     const libraries = new Map(
       await Promise.all(slugs.map(async (s) => [s, await libraryFor(s)] as const)),
     );
+    // Resolved with the clips so a Reel is recognisable as one here. Without
+    // them this route would resolve the still underneath and export the post as
+    // a photo, which is the failure this is trying to avoid.
+    const videos = new Map(
+      await Promise.all(slugs.map(async (s) => [s, await videosFor(s)] as const)),
+    );
 
     // Absolute — Metricool fetches these from its own servers, so a
     // root-relative path would be meaningless.
     const origin = new URL(request.url).origin;
-    const rows: ExportPost[] = withBrand.map(({ post: p, brand }) => {
+    let skippedVideo = 0;
+    const rows: ExportPost[] = withBrand.flatMap(({ post: p, brand }) => {
       const caption = captions[p.id].caption;
       const artwork = resolveArtwork({
         brand,
@@ -94,16 +109,25 @@ export async function GET(request: NextRequest) {
         origin,
         library: libraries.get(p.brandSlug) ?? [],
         shareImages,
-      });
-      return {
-        caption,
-        date: p.date,
-        time: p.time,
         platform: p.platform,
-        imageUrl: artwork.url,
-        imageAlt: artwork.alt,
-        brandName,
-      };
+        videos: videos.get(p.brandSlug) ?? [],
+        pinnedVideo: captions[p.id]?.video ?? null,
+      });
+      if (artwork.kind === "video") {
+        skippedVideo++;
+        return [];
+      }
+      return [
+        {
+          caption,
+          date: p.date,
+          time: p.time,
+          platform: p.platform,
+          imageUrl: artwork.url,
+          imageAlt: artwork.alt,
+          brandName,
+        },
+      ];
     });
 
     rows.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
@@ -118,6 +142,9 @@ export async function GET(request: NextRequest) {
         // Metricool advises importing in blocks of 50; surfaced as a header so
         // the calendar can warn rather than letting a big file fail quietly.
         "X-Row-Count": String(rows.length),
+        // Reels this file could not carry. Surfaced so "8 posts exported" is
+        // never read as "everything for that month is in here".
+        "X-Skipped-Video-Rows": String(skippedVideo),
         "X-Row-Limit": String(RECOMMENDED_MAX_ROWS),
         "Cache-Control": "no-store",
       },

@@ -1,8 +1,15 @@
 import { Brand } from "./brands";
 import { Topic } from "./sources";
 import { LibraryImage, pickForSlot } from "./library";
+import {
+  LibraryVideo,
+  PinnedVideo,
+  pickVideoForSlot,
+  platformPlaysVideo,
+} from "./video-library";
 import { shareImageFor, mapWithConcurrency } from "./share-image";
 import { generatedImageUrl, hookLine } from "./post-image-url";
+import type { Platform } from "./types";
 
 /**
  * Which picture a post carries — decided in one place, for every surface.
@@ -21,15 +28,33 @@ import { generatedImageUrl, hookLine } from "./post-image-url";
  *   2. The topic page's share image — the real, already-designed picture a
  *      follower would see if they opened the link.
  *   3. A generated branded card. The floor, so no post goes out bare.
+ *
+ * A brand with video clips is a separate question asked first. A Reel is not a
+ * better-looking post, it is a different distribution: Instagram shows a still
+ * to followers and a Reel to people who have never heard of the account. So a
+ * clip wins over every picture when the brand has one, and the picture that
+ * would have been chosen stays on as the poster frame when the clip has none.
  */
 
 export type ArtworkSource = "library" | "page" | "generated";
+
+/**
+ * Whether the post carries a still or a clip. `url` is a still either way — the
+ * poster frame for a video — so every surface that only knows how to show a
+ * picture keeps working, and the ones that can play a video read `videoUrl`.
+ */
+export type ArtworkKind = "image" | "video";
 
 export interface Artwork {
   url: string;
   source: ArtworkSource;
   /** Sensible alt text: the topic for a real picture, the hook for a card. */
   alt: string;
+  kind: ArtworkKind;
+  /** The clip itself. Set only when kind is "video". */
+  videoUrl?: string;
+  /** What the clip shows, for a caption on screen and for the writer. */
+  videoDescribes?: string;
 }
 
 interface ResolveInput {
@@ -42,9 +67,38 @@ interface ResolveInput {
   library: LibraryImage[];
   /** Page share images, pre-fetched in bulk. Missing key = not looked up. */
   shareImages: Map<string, string | null>;
+  /** Which platform this slot posts to — a clip is only used where it plays. */
+  platform?: Platform;
+  /** The brand's clips. Empty for every brand that has none. */
+  videos?: LibraryVideo[];
+  /** The clip stored with the caption, which outranks a fresh rotation. */
+  pinnedVideo?: PinnedVideo | null;
 }
 
-export function resolveArtwork({
+export function resolveArtwork(input: ResolveInput): Artwork {
+  const { slotId, topic, videos, pinnedVideo, platform } = input;
+
+  const clip = platformPlaysVideo(platform)
+    ? pinnedVideo ?? pickVideoForSlot(videos ?? [], slotId, topic.url ?? topic.title)
+    : null;
+
+  if (clip) {
+    return {
+      // A clip uploaded without its poster frame borrows the still this post
+      // would otherwise have carried, rather than showing an empty box.
+      url: clip.poster ?? resolveStill(input).url,
+      source: "library",
+      alt: clip.describes ?? topic.title,
+      kind: "video",
+      videoUrl: clip.url,
+      ...(clip.describes ? { videoDescribes: clip.describes } : {}),
+    };
+  }
+
+  return { ...resolveStill(input), kind: "image" };
+}
+
+function resolveStill({
   brand,
   slotId,
   topic,
@@ -52,7 +106,7 @@ export function resolveArtwork({
   origin,
   library,
   shareImages,
-}: ResolveInput): Artwork {
+}: ResolveInput): Omit<Artwork, "kind"> {
   const fromLibrary = pickForSlot(library, slotId, topic.url ?? topic.title);
   if (fromLibrary) {
     return { url: fromLibrary.url, source: "library", alt: topic.title };

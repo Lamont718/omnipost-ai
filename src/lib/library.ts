@@ -48,6 +48,11 @@ export async function libraryFor(brandSlug: string): Promise<LibraryImage[]> {
       const { list } = await import("@vercel/blob");
       const { blobs } = await list({ prefix: `${PREFIX}${brandSlug}/` });
       uploaded = blobs
+        // Clips and their poster frames live one level down, under `video/`,
+        // and a listing by prefix returns them too. Without this the posters
+        // would join the still-image rotation and a Reel's thumbnail would
+        // start appearing as a photo post in its own right.
+        .filter((b) => !b.pathname.slice(`${PREFIX}${brandSlug}/`.length).includes("/"))
         .map((b) => ({ url: b.url, name: nameOf(b.pathname) }))
         .filter((i) => !!i.name);
     } catch (err) {

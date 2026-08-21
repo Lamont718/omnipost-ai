@@ -4,7 +4,7 @@ import { isAllowedImageHost } from "@/lib/brand-hosts";
 export const runtime = "nodejs";
 
 /**
- * Hand back a post's artwork as a file the browser saves.
+ * Hand back a post's artwork — a picture or a clip — as a file the browser saves.
  *
  * A plain `<a download>` does not work here. The share images live on the brand
  * sites, so they are cross-origin, and browsers ignore the download attribute on
@@ -21,6 +21,12 @@ export const runtime = "nodejs";
 
 const FETCH_TIMEOUT_MS = 15_000;
 const MAX_BYTES = 12 * 1024 * 1024;
+/**
+ * Clips get their own ceiling. The Emeka reels are one to two megabytes each,
+ * so this is headroom rather than a target — but a video is the one thing here
+ * that can plausibly be large, and the buffer is held in memory.
+ */
+const MAX_VIDEO_BYTES = 40 * 1024 * 1024;
 
 const EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -28,6 +34,9 @@ const EXT: Record<string, string> = {
   "image/webp": "webp",
   "image/gif": "gif",
   "image/avif": "avif",
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+  "video/webm": "webm",
 };
 
 /** Keep a caller-supplied filename to something safe to write to disk. */
@@ -86,21 +95,33 @@ export async function GET(request: NextRequest) {
   }
 
   const contentType = (upstream.headers.get("content-type") ?? "").split(";")[0].trim();
-  if (!contentType.startsWith("image/")) {
-    return NextResponse.json({ error: `not an image (${contentType || "unknown"})` }, { status: 415 });
+  // Reels are saved through here too, and the type decides both the ceiling and
+  // the extension the file lands with — an .mp4 saved as .png is a file his
+  // phone will refuse to open.
+  const isVideo = contentType.startsWith("video/");
+  if (!contentType.startsWith("image/") && !isVideo) {
+    return NextResponse.json(
+      { error: `not an image or video (${contentType || "unknown"})` },
+      { status: 415 },
+    );
   }
 
+  const ceiling = isVideo ? MAX_VIDEO_BYTES : MAX_BYTES;
+  const tooLarge = isVideo ? "video is too large" : "image is too large";
+
   const declared = Number(upstream.headers.get("content-length") ?? 0);
-  if (declared > MAX_BYTES) {
-    return NextResponse.json({ error: "image is too large" }, { status: 413 });
+  if (declared > ceiling) {
+    return NextResponse.json({ error: tooLarge }, { status: 413 });
   }
 
   const bytes = new Uint8Array(await upstream.arrayBuffer());
-  if (bytes.byteLength > MAX_BYTES) {
-    return NextResponse.json({ error: "image is too large" }, { status: 413 });
+  if (bytes.byteLength > ceiling) {
+    return NextResponse.json({ error: tooLarge }, { status: 413 });
   }
 
-  const filename = `${safeName(requestUrl.searchParams.get("name"))}.${EXT[contentType] ?? "png"}`;
+  const filename = `${safeName(requestUrl.searchParams.get("name"))}.${
+    EXT[contentType] ?? (isVideo ? "mp4" : "png")
+  }`;
 
   return new NextResponse(bytes, {
     headers: {

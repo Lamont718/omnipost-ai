@@ -4,6 +4,12 @@ import { composePost } from "@/lib/compose";
 import { writeCaptions } from "@/lib/store";
 import { loadExampleBank, pickExamples } from "@/lib/examples";
 import { readAllFacts, factsForSlot } from "@/lib/facts";
+import {
+  videosFor,
+  pickVideoForSlot,
+  pinnable,
+  platformPlaysVideo,
+} from "@/lib/video-library";
 import { Platform } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -48,6 +54,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Unknown brand: ${slug}` }, { status: 404 });
     }
 
+    // Which clip this post carries, decided before it is written so the caption
+    // can be composed against what is actually on screen. The pick is
+    // deterministic on the slot id and the topic, so a reroll of the wording
+    // lands on the same clip rather than silently swapping the video.
+    const clip = platformPlaysVideo(platform)
+      ? pickVideoForSlot(await videosFor(slug), id, topic.url ?? topic.title)
+      : null;
+
     const post = await composePost({
       brand,
       topic: { title: topic.title, context: topic.context },
@@ -55,6 +69,7 @@ export async function POST(request: NextRequest) {
       toneOverride: tone_override,
       examples: pickExamples(await loadExampleBank(), slug, platform),
       brandFacts: factsForSlot((await readAllFacts())[slug]?.facts ?? [], id),
+      media: clip ? { kind: "video", describes: clip.describes } : undefined,
     });
 
     // Timestamps can't come from the runtime clock inside some contexts, but a
@@ -71,6 +86,7 @@ export async function POST(request: NextRequest) {
           // site topic by definition, and one without is evergreen.
           source: topic.source === "evergreen" || !topic.url ? "evergreen" : "site",
         },
+        ...(clip ? { video: pinnable(clip) } : {}),
       },
     });
 

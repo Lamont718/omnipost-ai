@@ -1,4 +1,5 @@
 import { PostSlot, VoiceProfile } from "./types";
+import type { VideoClipMeta } from "./video-library";
 
 /**
  * Every brand OmniPost writes for, and how each one sounds.
@@ -48,6 +49,21 @@ export interface Brand {
    * pictures but doesn't set og:image on the pages that use them.
    */
   imageLibrary?: string[];
+  /**
+   * What each of this brand's video clips shows, keyed by the filename it was
+   * uploaded under in Blob (`library/<slug>/video/<name>.mp4`).
+   *
+   * The clips themselves are discovered from Blob, so dropping another one in
+   * is enough to put it in the rotation. This is the part a listing cannot
+   * tell us: what is on screen, and which topics it suits. Both matter — the
+   * caption writer is given the description so it never writes as though the
+   * video shows the subject of the post, and the tags are what put a spacecraft
+   * window on an astronaut's post instead of whatever came next in the cycle.
+   *
+   * A clip with no entry here still posts. It simply carries no tags, and the
+   * writer is told nothing about it rather than something invented.
+   */
+  videoClips?: VideoClipMeta[];
   /**
    * True when the site publishes ONE og:image for every page, so it says
    * nothing about the topic and must never be attached to a post.
@@ -232,6 +248,101 @@ export const BRANDS: Brand[] = [
       ],
       example_posts: [],
     },
+    // Fifteen 1080x1920 clips, uploaded to Blob under
+    // library/emeka-explores/video/. Six were already cut for social in July
+    // and had never been posted; the other nine were reframed from the raw
+    // generator output with the blurred-fill recipe (fills the frame rather
+    // than cropping, so nobody's hair puffs get cut off the top).
+    //
+    // The descriptions are what is ACTUALLY on screen — three of these files
+    // are named after the prompt that generated them rather than the footage
+    // that came back, and the names lie: "bounces with joy" is a counting
+    // scene, "proud smile" is a science flask, "gazes out the window" is a
+    // spacecraft porthole. Every one was checked frame by frame before it was
+    // written down here, because the caption writer is handed this text as
+    // fact and a wrong description becomes a wrong sentence in a real post.
+    //
+    // Every clip is silent and about five seconds. He picks music in Instagram.
+    videoClips: [
+      {
+        name: "01-emeka-hello-wave",
+        describes: "Emeka waves at the camera and smiles, close up, plain warm background",
+        tags: ["hello", "welcome", "school", "first", "meet"],
+      },
+      {
+        name: "02-emeka-reading",
+        describes:
+          "Emeka sits cross-legged on a rug turning the page of a picture book, a bookshelf behind her",
+        tags: ["reading", "book", "books", "story", "words", "sight", "literacy", "representation"],
+      },
+      {
+        name: "03-emeka-science-bubbles",
+        describes: "Emeka laughs as soap bubbles and coloured letter blocks float around her",
+        tags: ["science", "bubbles", "curious", "discover", "experiment"],
+      },
+      {
+        name: "04-emeka-celebrate",
+        describes: "Emeka throws both arms up under falling confetti",
+        tags: ["celebrate", "kwanzaa", "holiday", "month", "proud", "activities"],
+      },
+      {
+        name: "05-emeka-friends-hug",
+        describes: "Emeka, Heaven and Sandra hug each other in a park",
+        tags: ["friends", "community", "together", "heritage", "kindness", "african"],
+      },
+      {
+        name: "06-emeka-coco-hug",
+        describes: "Emeka sits on the grass hugging Coco, her golden curly-haired dog",
+        tags: ["coco", "comfort", "anxiety", "feelings"],
+      },
+      {
+        name: "07-emeka-counting-numbers",
+        describes: "Emeka holds up her fingers while brightly coloured numbers float around her",
+        tags: ["counting", "numbers", "preschool", "math", "kindergarten"],
+      },
+      {
+        name: "08-emeka-welcome-smile",
+        describes: "Emeka gives a warm welcoming smile and tilts her head, close up",
+        tags: ["welcome", "routine", "readiness", "school", "checklist"],
+      },
+      {
+        name: "09-emeka-apple",
+        describes: "Emeka holds up a big red apple at a classroom desk",
+        tags: ["apple", "alphabet", "letters", "teacher", "classroom"],
+      },
+      {
+        name: "10-emeka-science-flask",
+        describes:
+          "Emeka holds up a flask of blue liquid next to an open book in a classroom",
+        tags: ["science", "inventors", "invention", "carver", "experiment"],
+      },
+      {
+        name: "11-emeka-coco-hug-2",
+        describes: "Emeka and Coco sit together in the grass among flowers",
+        tags: ["coco", "comfort", "gentle"],
+      },
+      {
+        name: "12-emeka-space-window",
+        describes:
+          "Emeka, seen from behind, looks out of a round spacecraft window at the Earth below",
+        tags: ["space", "astronaut", "jemison", "johnson", "earth", "orbit"],
+      },
+      {
+        name: "13-emeka-moon",
+        describes: "Emeka holds a glowing crescent moon in both hands under a starry sky",
+        tags: ["moon", "night", "stars", "dream", "wonder", "space"],
+      },
+      {
+        name: "14-emeka-kite",
+        describes: "Emeka runs through a field flying a rainbow kite",
+        tags: ["kite", "flying", "flight", "aviation", "coleman", "outside"],
+      },
+      {
+        name: "15-emeka-writing",
+        describes: "Emeka writes with a pencil at a classroom desk, then looks up smiling",
+        tags: ["writing", "practice", "homework", "school", "letters", "words"],
+      },
+    ],
     sources: [
       {
         sitemap: "https://www.emekaexplores.com/sitemap.xml",
