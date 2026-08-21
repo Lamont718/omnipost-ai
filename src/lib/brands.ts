@@ -273,7 +273,10 @@ export const BRANDS: Brand[] = [
         name: "02-emeka-reading",
         describes:
           "Emeka sits cross-legged on a rug turning the page of a picture book, a bookshelf behind her",
-        tags: ["reading", "book", "books", "story", "words", "sight", "literacy", "representation"],
+        // Not "story": it is a substring of "history", so it quietly claimed
+        // every Black-history topic on the site. Tags are matched against a
+        // flattened URL, which has no word boundaries to lean on.
+        tags: ["reading", "book", "books", "words", "sight", "literacy", "representation"],
       },
       {
         name: "03-emeka-science-bubbles",

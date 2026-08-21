@@ -127,26 +127,52 @@ export async function videosFor(brandSlug: string): Promise<LibraryVideo[]> {
 }
 
 /**
- * Where a slot sits in the rotation.
+ * Where a slot sits in the rotation: which number post this is for its brand,
+ * counting from a fixed week.
  *
- * Deliberately not the hash used for images. A hash over fifteen clips and
- * thirty slots leaves some clips used four times and others never — fine when
- * the library is large enough to hide it, visible when a month of Reels keeps
- * opening on the same five seconds. Slot ids carry the date, and a brand posts
- * on fixed weekdays, so counting days gives a sequence that steps evenly and is
- * still completely deterministic.
+ * Deliberately not the hash used for images, and not a count of days either.
+ * Both leave the rotation lumpy — the first draft counted days, and across
+ * thirty-one Emeka slots it used one clip five times and three clips never,
+ * because a Mon/Wed/Fri schedule steps by 12, then -8, then 3, and none of
+ * that is coprime with anything useful. Counting POSTS steps by exactly one,
+ * so a library of fifteen cycles cleanly through all fifteen.
+ *
+ * The brand's own schedule is what turns a date back into a post number, and
+ * the slot id carries the brand slug in front of the date — the same parse
+ * lib/publish does. A slot that doesn't match the schedule (one that has been
+ * moved, an id from an older shape) falls back to a hash rather than to
+ * nothing.
  */
 function rotationIndex(slotId: string): number {
-  const match = slotId.match(/(\d{4})-(\d{2})-(\d{2}):(\d{2})/);
-  if (!match) {
-    let hash = 0;
-    for (let i = 0; i < slotId.length; i++) hash = (hash * 31 + slotId.charCodeAt(i)) | 0;
-    return Math.abs(hash);
+  const match = slotId.match(/^([a-z0-9-]+):(\d{4})-(\d{2})-(\d{2}):(\d{2}):(\d{2}):([a-z]+)$/);
+  if (match) {
+    const [, slug, y, m, d, hh, mm, platform] = match;
+    const week = brandBySlug(slug)?.schedule ?? [];
+    if (week.length > 0) {
+      const utc = Date.UTC(Number(y), Number(m) - 1, Number(d));
+      const ordered = [...week].sort(
+        (a, b) => a.day - b.day || a.time.localeCompare(b.time),
+      );
+      const position = ordered.findIndex(
+        (slot) =>
+          slot.day === new Date(utc).getUTCDay() &&
+          slot.time === `${hh}:${mm}` &&
+          slot.platform === platform,
+      );
+      if (position >= 0) {
+        // +4 puts the week boundary on a Sunday, which is where the schedule
+        // already puts it (Weekday 0 is Sunday). Without the shift the buckets
+        // run Thursday to Wednesday, and a Mon/Wed/Fri brand steps -2, 1, 4
+        // instead of 1, 1, 1 — it still spreads, but only by luck.
+        const weeks = Math.floor((utc / 86_400_000 + 4) / 7);
+        return weeks * ordered.length + position;
+      }
+    }
   }
-  const [, y, m, d, hh] = match;
-  const days = Math.floor(Date.UTC(Number(y), Number(m) - 1, Number(d)) / 86_400_000);
-  // The hour separates two posts on the same day into different clips.
-  return days + Number(hh);
+
+  let hash = 0;
+  for (let i = 0; i < slotId.length; i++) hash = (hash * 31 + slotId.charCodeAt(i)) | 0;
+  return Math.abs(hash);
 }
 
 function flatten(hint: string): string {
