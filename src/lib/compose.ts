@@ -86,6 +86,27 @@ export const PLATFORM_LIMIT: Partial<Record<Platform, number>> = { x: 280 };
 /** How many rewrites to spend pulling an overlong caption back under the limit. */
 const LENGTH_RETRIES = 2;
 
+/**
+ * The opening line of a Reel caption, in characters.
+ *
+ * Not the same kind of number as PLATFORM_LIMIT. X REJECTS a post over 280;
+ * Instagram merely truncates, and the caption still publishes — so this is a
+ * design target, not a ceiling, and it is enforced softly.
+ *
+ * It still matters. The whole reason to write a Reel differently is that the
+ * first line is the only line a stranger reads before deciding to scroll on,
+ * and one of the first thirty-one captions opened with a 320-character
+ * paragraph that Instagram would cut off mid-sentence. The rule asked for a
+ * front-loaded hook and nothing measured it, which is exactly how a
+ * 287-character X post reached the September calendar.
+ *
+ * TRIGGER is deliberately well above TARGET so this fires on the ones that are
+ * genuinely a wall of text — it caught 1 of 31 — rather than spending a second
+ * model call on every post to shave a few characters.
+ */
+const HOOK_TARGET = 125;
+const HOOK_TRIGGER = 180;
+
 function buildSystemPrompt(
   brandName: string,
   voice: VoiceProfile,
@@ -331,7 +352,38 @@ ${media.describes}
     }
   }
 
+  // The Reel hook. Same shape as the length pass above and for the same reason:
+  // the instruction was already in the prompt, and asking is not checking.
+  if (media?.kind === "video" && platform === "instagram") {
+    const opening = firstLine(best.caption);
+    if (opening.length > HOOK_TRIGGER) {
+      messages.push(
+        { role: "assistant", content: JSON.stringify(best) },
+        {
+          role: "user",
+          content:
+            `That caption opens with a ${opening.length}-character paragraph. Instagram cuts a ` +
+            `caption off after roughly ${HOOK_TARGET} characters, so a reader sees it break ` +
+            `mid-sentence and scrolls on. Rewrite it so the FIRST line is a hook under ` +
+            `${HOOK_TARGET} characters that works on its own, with a line break after it. ` +
+            `Keep every fact, every verified detail and the same subject — move the words, ` +
+            `do not add any. Reply with the same JSON shape.`,
+        },
+      );
+      const retry = await generate(system, messages, brand.voice, budget);
+      if (firstLine(retry.caption).length < opening.length) best = retry;
+      console.log(
+        `compose: ${brand.slug} reel hook ${opening.length} -> ${firstLine(best.caption).length} chars`,
+      );
+    }
+  }
+
   return best;
+}
+
+/** The caption's opening line, which is all Instagram shows before "more". */
+function firstLine(caption: string): string {
+  return caption.split("\n")[0].trim();
 }
 
 async function generate(
