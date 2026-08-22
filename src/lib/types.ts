@@ -19,6 +19,18 @@ export interface PostSlot {
   /** 24h local time, "HH:MM". Interpreted as America/New_York. */
   time: string;
   platform: Platform;
+  /**
+   * Draw this slot's topic only from sources carrying this tag, and never from
+   * the untagged ones.
+   *
+   * Without this a brand has one pool and every slot eats from it, which is
+   * wrong the moment two of a brand's sources are different kinds of thing.
+   * Emeka Explores posts lessons three times a week and now also has twelve
+   * book pages; dropping the books into the same pool would have meant a week
+   * of three books and then a month of none, at the rotation's discretion.
+   * Tagging one slot `books` reserves it, and leaves the other two on lessons.
+   */
+  topics?: string;
 }
 
 /**

@@ -25,11 +25,20 @@ export interface Topic {
   /** Page this came from, so the digest can link it. Absent for evergreens. */
   url?: string;
   source: "site" | "evergreen";
+  /**
+   * Carried through from the source that yielded this topic — see
+   * `TopicSource.pageImageWins`. It rides on the topic rather than being looked up
+   * later because the topic is what gets pinned into a written caption, so a
+   * book post keeps its cover even if the sources are re-shuffled afterwards.
+   */
+  pageImageWins?: boolean;
 }
 
 interface SitemapEntry {
   url: string;
   lastmod?: Date;
+  /** From the source this entry came out of. */
+  pageImageWins?: boolean;
 }
 
 const FETCH_TIMEOUT_MS = 15_000;
@@ -109,7 +118,9 @@ function matchesSource(url: string, source: TopicSource): boolean {
 async function candidatesFor(source: TopicSource): Promise<SitemapEntry[]> {
   const xml = await fetchText(source.sitemap);
   if (!xml) return [];
-  return parseSitemap(xml).filter((e) => matchesSource(e.url, source));
+  return parseSitemap(xml)
+    .filter((e) => matchesSource(e.url, source))
+    .map((e) => (source.pageImageWins ? { ...e, pageImageWins: true } : e));
 }
 
 /**
@@ -164,6 +175,31 @@ async function fetchPageMeta(
 }
 
 /**
+ * How far the window moves from one week to the next.
+ *
+ * `take` is the obvious answer and it is right whenever a brand fills several
+ * slots a week: three picks a week move on by three, and the catalogue is
+ * covered without overlap. It is wrong for a brand with ONE slot a week, where
+ * moving on by one means walking the sitemap top to bottom — and sitemaps group
+ * related pages together. That is why The Conductor posted the B37 and then the
+ * B38 the following week, and why the twelve Emeka books would have gone out as
+ * six consecutive Ignites titles before reaching anything else.
+ *
+ * A step co-prime with the list length still visits every item exactly once per
+ * full cycle, so nothing is lost or repeated — it just arrives in an order that
+ * doesn't mirror the file. Falls back to 1 when nothing co-prime is available
+ * (short lists), which is the old behaviour.
+ */
+function weekStep(len: number, take: number): number {
+  if (take > 1) return take;
+  const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+  for (const candidate of [5, 7, 3, 11]) {
+    if (candidate < len && gcd(candidate, len) === 1) return candidate;
+  }
+  return 1;
+}
+
+/**
  * Rotate `count` items out of `list` for a given week, wrapping around. Weeks
  * advance the window, so a brand works through its whole catalogue instead of
  * posting about the same three pages forever.
@@ -180,7 +216,7 @@ function rotate<T>(list: T[], count: number, week: number): T[] {
   const seen = new Set<number>();
 
   for (let i = 0; i < take; i++) {
-    let idx = (week * take + i * stride) % list.length;
+    let idx = (week * weekStep(list.length, take) + i * stride) % list.length;
     // Stride can collide once the list wraps; walk forward to the next free slot.
     while (seen.has(idx)) idx = (idx + 1) % list.length;
     seen.add(idx);
@@ -190,20 +226,23 @@ function rotate<T>(list: T[], count: number, week: number): T[] {
 }
 
 /**
- * Choose this week's topics for a brand: anything genuinely new first, then a
- * rotating slice of the back catalogue, then evergreens if the site is down or
- * the brand has no site at all.
+ * Pick `want` topics out of one pool: anything genuinely new first, then a
+ * rotating slice of the back catalogue.
+ *
+ * Split out of `topicsForBrand` when slots got their own pools — the fresh/rest
+ * reasoning below is per pool, not per brand. Twelve book pages all stamped
+ * with one deploy date must not make the lessons look stale, and vice versa.
  */
-export async function topicsForBrand(
-  brand: Brand,
-  now: Date = new Date(),
+async function topicsFromPool(
+  sources: TopicSource[],
+  want: number,
+  week: number,
+  now: Date,
 ): Promise<Topic[]> {
-  // One topic per scheduled slot.
-  const want = brand.schedule.length;
-  const week = weekIndex(now);
+  if (want <= 0 || sources.length === 0) return [];
 
   const all: SitemapEntry[] = [];
-  for (const source of brand.sources) {
+  for (const source of sources) {
     all.push(...(await candidatesFor(source)));
   }
 
@@ -236,7 +275,7 @@ export async function topicsForBrand(
   ).slice(0, want);
 
   // In parallel: these were serial, and a slow page held up the whole week.
-  const topics: Topic[] = await Promise.all(
+  return Promise.all(
     picked.map(async (entry) => {
       const meta = await fetchPageMeta(entry.url);
       return {
@@ -244,27 +283,83 @@ export async function topicsForBrand(
         source: "site" as const,
         title: meta.title ?? pathOf(entry.url).replace(/[-/]/g, " ").trim(),
         context: meta.description,
+        ...(entry.pageImageWins ? { pageImageWins: true } : {}),
       };
     }),
   );
+}
 
-  // Top up from evergreens if the site gave us less than we wanted. A bare
+/**
+ * Choose this week's topics for a brand — one per slot, returned in slot order.
+ *
+ * Each slot draws from the pool its `topics` tag names, and untagged slots draw
+ * from the untagged sources. A brand with no tags anywhere is one pool and
+ * behaves exactly as it did before lanes existed.
+ *
+ * Anything a pool can't fill falls through to evergreens, same as always: a
+ * site being down should cost a post its specifics, not its slot.
+ */
+export async function topicsForBrand(
+  brand: Brand,
+  now: Date = new Date(),
+): Promise<Topic[]> {
+  const week = weekIndex(now);
+  if (brand.schedule.length === 0) return [];
+
+  // Each distinct slot tag is a lane: the pool it draws from, and the slot
+  // positions it fills. "" is the untagged pool every brand had before.
+  const lanes: { tag: string; slotIndexes: number[] }[] = [];
+  brand.schedule.forEach((slot, i) => {
+    const tag = slot.topics ?? "";
+    const lane = lanes.find((l) => l.tag === tag);
+    if (lane) lane.slotIndexes.push(i);
+    else lanes.push({ tag, slotIndexes: [i] });
+  });
+
+  const bySlot: (Topic | undefined)[] = new Array(brand.schedule.length).fill(
+    undefined,
+  );
+
+  await Promise.all(
+    lanes.map(async ({ tag, slotIndexes }) => {
+      const sources = brand.sources.filter((s) => (s.tag ?? "") === tag);
+      const picked = await topicsFromPool(
+        sources,
+        slotIndexes.length,
+        week,
+        now,
+      );
+      slotIndexes.forEach((slotIndex: number, k: number) => {
+        if (picked[k]) bySlot[slotIndex] = picked[k];
+      });
+    }),
+  );
+
+  // Top up from evergreens if a pool gave us less than its slots wanted. A bare
   // string carries no context (the model gets no specifics to invent from); a
   // `{ title, facts }` entry passes verified canon through as context.
-  if (topics.length < want && brand.evergreenTopics.length > 0) {
-    for (const entry of rotate(
-      brand.evergreenTopics,
-      want - topics.length,
-      week,
-    )) {
-      const e: EvergreenTopic = entry;
-      topics.push(
+  const gaps = bySlot
+    .map((topic, i) => (topic ? -1 : i))
+    .filter((i) => i >= 0);
+  if (gaps.length > 0 && brand.evergreenTopics.length > 0) {
+    const fill = rotate(brand.evergreenTopics, gaps.length, week);
+    gaps.forEach((slotIndex, k) => {
+      const e: EvergreenTopic | undefined = fill[k];
+      if (!e) return;
+      bySlot[slotIndex] =
         typeof e === "string"
           ? { title: e, source: "evergreen" }
-          : { title: e.title, context: e.facts, source: "evergreen" },
-      );
-    }
+          : { title: e.title, context: e.facts, source: "evergreen" };
+    });
   }
 
-  return topics;
+  /**
+   * Slot order is the contract — `brandPostsInRange` indexes this array by slot
+   * position, so a hole must not shift every later slot onto the wrong topic.
+   * A pool that came up empty with no evergreen left to spare falls back to the
+   * brand name, which is what the caller used to substitute anyway.
+   */
+  return bySlot.map(
+    (topic) => topic ?? { title: brand.name, source: "evergreen" as const },
+  );
 }

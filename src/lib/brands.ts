@@ -20,6 +20,24 @@ export interface TopicSource {
   include?: RegExp[];
   /** Paths matching any of these are skipped, even if `include` matched. */
   exclude?: RegExp[];
+  /**
+   * Names this source's pool. A slot with a matching `topics` tag draws only
+   * from here; every untagged slot draws only from the untagged sources. Leave
+   * unset for a brand's ordinary source — one brand, one pool, as before.
+   */
+  tag?: string;
+  /**
+   * The page's own image IS the subject of these posts, so it beats both of the
+   * things that normally outrank it: no video clip is chosen for them, and the
+   * brand's own picture library does not override them.
+   *
+   * Set for the books. A clip normally wins because a moving Emeka beats a
+   * static card, and the library normally wins because artwork Lamont chose
+   * beats anything derived — both are right for a lesson and both are wrong
+   * here. "Pre-order My Crown" as a Reel of Emeka blowing bubbles shows the
+   * buyer everything except the thing being sold.
+   */
+  pageImageWins?: boolean;
 }
 
 /**
@@ -213,10 +231,14 @@ export const BRANDS: Brand[] = [
     // Wednesday was Facebook until 14 Aug 2026 — see the note on YODM. Kept at
     // three posts a week, all Instagram, because that is the only platform this
     // brand actually has an audience on.
+    // Friday is the books slot — one post a week out of the three, so the shop
+    // shows up without the feed turning into a shop. Lamont posts every one of
+    // these by hand, so buying the books their own slots would have meant
+    // asking him to post more, not asking the feed to work harder.
     schedule: [
       { day: 1, time: "09:00", platform: "instagram" },
       { day: 3, time: "19:00", platform: "instagram" },
-      { day: 5, time: "09:00", platform: "instagram" },
+      { day: 5, time: "09:00", platform: "instagram", topics: "books" },
     ],
     voice: {
       tone: "Warm, proud, parent-to-parent — encouraging without being saccharine",
@@ -237,6 +259,53 @@ export const BRANDS: Brand[] = [
         "#BlackHistoryForKids",
         "#BlackBoyJoy",
         "#RaisingReaders",
+      ],
+      // ⚠️ The My Crown facts below were read off emeka-books.com on 2026-08-22 —
+      // the price, the run size and the September 24 ship date all come from its
+      // buy box. They are the only commerce specifics any caption is allowed to
+      // state, so they have to be re-checked when that run actually ships or the
+      // date silently becomes a false promise in a live post.
+      //
+      // The books arrived in this brand's rotation on 2026-08-22, and they are
+      // a different kind of post from a lesson: there is something to want, and
+      // for eleven of the twelve there is nothing yet to buy. Every rule below
+      // was read off the live pages on emeka-books.com rather than assumed —
+      // getting this wrong means a caption that sells a book nobody can order.
+      topic_constraints: [
+        {
+          when: /Emeka Books/,
+          rule:
+            "This topic is a BOOK, not a lesson on the website. It is a printed hardcover — " +
+            "the book pages call it 'a 20-page hardcover' and show the opening five pages. " +
+            "Write about the story: who is in it, what happens, why a child would want it read " +
+            "to them. Name the book by its title. Never describe it as a lesson, a guide, an " +
+            "activity or something to do online, and never say how many pages, how much it " +
+            "costs or when it ships beyond what the verified facts above state.",
+        },
+        {
+          when: /My Crown.*Emeka Books/,
+          rule:
+            "My Crown is the ONE book that can be ordered, so this post has a real ask. " +
+            "These facts are read off its page and you may state them: it is a PRE-ORDER at " +
+            "$40, hardcover, 20 pages, 11 x 8.5 in; every copy is SIGNED BY LAMONT AND " +
+            "PERSONALISED WITH YOUR CHILD'S NAME; it ships by September 24 with free US " +
+            "shipping, and if it hasn't shipped by then the refund is automatic on request; " +
+            "the first print run is 25 copies, and pre-orders are what pay the printer — once " +
+            "25 are spoken for the run goes in. The signing and the child's name are the " +
+            "strongest thing here: prefer them to the price. Ask plainly once, at the end, and " +
+            "send them to the link in the bio. Claim nothing beyond this list.",
+        },
+        {
+          when: /Emeka Books/,
+          unless: /My Crown.*Emeka Books/,
+          rule:
+            "This book is NOT for sale yet — its page has no price and no cart, only a 'Tell me " +
+            "when it prints' box that takes an email address. So the ask is exactly that: tell " +
+            "them the book is coming and invite them to leave their email to hear when it " +
+            "prints, via the link in the bio. NEVER write 'buy', 'order', 'shop', 'get your " +
+            "copy', 'out now', 'available now', or any price — none of those are true of this " +
+            "book, and a reader who taps expecting to buy finds an email box instead.",
+        },
       ],
       keywords: [
         "Black history",
@@ -358,6 +427,21 @@ export const BRANDS: Brand[] = [
         // has caused every fabrication in this app.
         include: [/\/(guides|heroes)\/[a-z0-9-]+$/i],
         exclude: BOILERPLATE,
+      },
+      {
+        // The books. A separate site, so a separate source, and tagged so only
+        // the Friday slot draws from it.
+        //
+        // Twelve pages, each with its own cover as og:image at
+        // /pages/<slug>/cover.jpg and its real jacket copy as the meta
+        // description — which is the whole reason these are worth posting: the
+        // grounding is the publisher's own words, not a summary of a summary.
+        sitemap: "https://emeka-books.com/sitemap.xml",
+        include: [/\/books\/[a-z0-9-]+$/i],
+        exclude: BOILERPLATE,
+        tag: "books",
+        // The cover is the product — see the note in post-artwork.ts.
+        pageImageWins: true,
       },
     ],
     evergreenTopics: [

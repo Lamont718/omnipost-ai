@@ -163,7 +163,12 @@ export async function GET(request: Request) {
           const brand = brandBySlug(slot.brandSlug);
           if (!brand) return;
           try {
-            const clip = platformPlaysVideo(slot.platform)
+            // A still-only topic takes no clip — and the decision has to happen
+            // HERE, not just where artwork is resolved, because `media` below
+            // tells the writer a video is on screen. Choosing the clip and then
+            // refusing to show it would leave a caption written about footage
+            // nobody sees.
+            const clip = platformPlaysVideo(slot.platform) && !slot.topic.pageImageWins
               ? pickVideoForSlot(
                   videos.get(slot.brandSlug) ?? [],
                   slot.id,

@@ -58,9 +58,10 @@ export async function POST(request: NextRequest) {
     // can be composed against what is actually on screen. The pick is
     // deterministic on the slot id and the topic, so a reroll of the wording
     // lands on the same clip rather than silently swapping the video.
-    const clip = platformPlaysVideo(platform)
-      ? pickVideoForSlot(await videosFor(slug), id, topic.url ?? topic.title)
-      : null;
+    const clip =
+      platformPlaysVideo(platform) && !topic.pageImageWins
+        ? pickVideoForSlot(await videosFor(slug), id, topic.url ?? topic.title)
+        : null;
 
     const post = await composePost({
       brand,
@@ -85,6 +86,11 @@ export async function POST(request: NextRequest) {
           // Older callers don't send it; a topic with a page behind it is a
           // site topic by definition, and one without is evergreen.
           source: topic.source === "evergreen" || !topic.url ? "evergreen" : "site",
+          // This route rebuilds the topic field by field rather than spreading
+          // it, so anything not named here is dropped on the way into the
+          // store. `pageImageWins` has to be named or a book rerolled from the
+          // calendar would come back as a Reel with its cover nowhere.
+          ...(topic.pageImageWins ? { pageImageWins: true as const } : {}),
         },
         ...(clip ? { video: pinnable(clip) } : {}),
       },

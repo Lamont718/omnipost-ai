@@ -78,9 +78,19 @@ interface ResolveInput {
 export function resolveArtwork(input: ResolveInput): Artwork {
   const { slotId, topic, videos, pinnedVideo, platform } = input;
 
-  const clip = platformPlaysVideo(platform)
-    ? pinnedVideo ?? pickVideoForSlot(videos ?? [], slotId, topic.url ?? topic.title)
-    : null;
+  /**
+   * `pageImageWins` topics never take a clip, even a pinned one.
+   *
+   * The clip-beats-picture rule below is right when the picture is a share
+   * image derived from a page — a moving Emeka outperforms a static card. It is
+   * wrong when the picture IS the product. Every Emeka Books topic is marked
+   * still-only for that reason: a post about My Crown has to show the cover of
+   * My Crown, and the fifteen clips in the library show none of the books.
+   */
+  const clip =
+    platformPlaysVideo(platform) && !topic.pageImageWins
+      ? pinnedVideo ?? pickVideoForSlot(videos ?? [], slotId, topic.url ?? topic.title)
+      : null;
 
   if (clip) {
     return {
@@ -107,16 +117,32 @@ function resolveStill({
   library,
   shareImages,
 }: ResolveInput): Omit<Artwork, "kind"> {
+  // Only when the site actually varies it per page — see the flag's own note.
+  const pageImage =
+    !brand.sitewideShareImage && topic.url ? shareImages.get(topic.url) : null;
+
+  /**
+   * Normally the brand library wins: artwork Lamont chose beats anything
+   * derived from a page. A `pageImageWins` topic inverts that, and it has to,
+   * because for these the page image is not a derived share graphic — it is the
+   * subject. Emeka Explores has a Blob library of Emeka artwork, so without
+   * this a post about the cover of My Crown would be illustrated with a picture
+   * of Emeka and the cover would never appear.
+   *
+   * The library is still the fallback if the page turns out to have no image,
+   * so a book with a missing cover degrades to brand art rather than to the
+   * generated text card.
+   */
+  if (topic.pageImageWins && pageImage) {
+    return { url: pageImage, source: "page", alt: topic.title };
+  }
+
   const fromLibrary = pickForSlot(library, slotId, topic.url ?? topic.title);
   if (fromLibrary) {
     return { url: fromLibrary.url, source: "library", alt: topic.title };
   }
 
-  // Only when the site actually varies it per page — see the flag's own note.
-  if (!brand.sitewideShareImage && topic.url) {
-    const page = shareImages.get(topic.url);
-    if (page) return { url: page, source: "page", alt: topic.title };
-  }
+  if (pageImage) return { url: pageImage, source: "page", alt: topic.title };
 
   const generated = generatedImageUrl(brand.slug, caption);
   return {
