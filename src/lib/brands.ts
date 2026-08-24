@@ -257,7 +257,7 @@ export const BRANDS: Brand[] = [
       hashtags: [
         "#EmekaExplores",
         "#BlackHistoryForKids",
-        "#BlackBoyJoy",
+        "#BlackKidsRead",
         "#RaisingReaders",
       ],
       // ⚠️ The My Crown facts below were read off emeka-books.com on 2026-08-22 —
