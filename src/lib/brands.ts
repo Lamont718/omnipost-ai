@@ -68,6 +68,22 @@ export interface Brand {
    */
   imageLibrary?: string[];
   /**
+   * Extra hostnames this brand's artwork is served from, beyond its sitemap's.
+   *
+   * "Save image" proxies through /api/download, which checks the URL against
+   * an allowlist built from each brand's sitemap host. That holds only while a
+   * site serves its pictures from the domain its sitemap is on — and
+   * emeka-books.com does not: its sitemap is hyphenated, its og:image points at
+   * emekabooks.com, and all ten book covers 403'd on the button while looking
+   * perfectly fine on screen. The same failure as the library brands before
+   * isAllowedImageHost existed, arriving through a different door.
+   *
+   * Name only hosts you have checked actually belong to the brand. This widens
+   * what the server will fetch on a caller's behalf, which is the one thing the
+   * allowlist is there to keep narrow.
+   */
+  artworkHosts?: string[];
+  /**
    * What each of this brand's video clips shows, keyed by the filename it was
    * uploaded under in Blob (`library/<slug>/video/<name>.mp4`).
    *
@@ -228,6 +244,11 @@ export const BRANDS: Brand[] = [
     colorHex: "#7C3AED",
     tagline: "Kids' learning site — 130+ lessons",
     active: true,
+    // The book covers are served from emekabooks.com while the sitemap this
+    // brand pulls from is emeka-books.com. Verified 2026-08-24: both hosts
+    // return the identical 134,012-byte cover.jpg, and only the hyphenated one
+    // was on the allowlist.
+    artworkHosts: ["emekabooks.com", "www.emekabooks.com"],
     // Wednesday was Facebook until 14 Aug 2026 — see the note on YODM. Kept at
     // three posts a week, all Instagram, because that is the only platform this
     // brand actually has an audience on.

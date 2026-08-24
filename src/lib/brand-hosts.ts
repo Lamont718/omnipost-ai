@@ -65,6 +65,11 @@ export function isAllowedImageHost(hostname: string): boolean {
         // A malformed library URL contributes no host, same as above.
       }
     }
+    // Hosts a brand names outright, for artwork that lives on a domain its
+    // sitemap never mentions — a second domain for the same site, typically.
+    for (const declared of brand.artworkHosts ?? []) {
+      if (declared.toLowerCase() === host) return true;
+    }
   }
   return false;
 }
