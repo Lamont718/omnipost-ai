@@ -191,10 +191,33 @@ async function fetchPageMeta(
  * (short lists), which is the old behaviour.
  */
 function weekStep(len: number, take: number): number {
-  if (take > 1) return take;
   const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
-  for (const candidate of [5, 7, 3, 11]) {
-    if (candidate < len && gcd(candidate, len) === 1) return candidate;
+
+  if (take <= 1) {
+    for (const candidate of [5, 7, 3, 11]) {
+      if (candidate < len && gcd(candidate, len) === 1) return candidate;
+    }
+    return 1;
+  }
+
+  // `take` is the honest step for a multi-slot brand and it is usually fine —
+  // but only because gcd(take, len) usually happens to be 1. When it isn't, the
+  // window lands on the same residues every week and the rest of the catalogue
+  // is not deprioritised, it is UNREACHABLE. WWSH ran two slots a week against
+  // four pages: stepping by 2 through 4 only ever reaches positions 0 and 2, so
+  // /beyond-chess-enrichment and /mentorship were never once posted in the
+  // months this ran. Emeka Explores is the same shape and costs more — two
+  // lesson slots against 48 pages, so 24 lessons could never be chosen, which
+  // halves the cycle and doubles how often the brand repeats itself.
+  //
+  // So the co-prime reasoning above is not a special case for one-slot brands.
+  // It is the whole reason the rotation covers anything. Step up from `take`
+  // to the next number sharing no factor with the pool: still at least as fast
+  // as the week consumes, so weeks don't overlap, and now every page is
+  // reachable.
+  if (gcd(take, len) === 1) return take;
+  for (let step = take + 1; step < len; step++) {
+    if (gcd(step, len) === 1) return step;
   }
   return 1;
 }
