@@ -62,6 +62,20 @@ export interface Brand {
   /** Included in the calendar. */
   active: boolean;
   /**
+   * The real @handle, for the platform mock-ups.
+   *
+   * Without it the previews fall back to the slug, and that fallback is worse
+   * than nothing: every one of them is a real Instagram account belonging to
+   * somebody else. @emekaexplores has 506 followers and 588 posts and is not
+   * his; his is @emeka_explores. @wwsh, @yodm, @mosthated, @theconductor and
+   * @heartoftheblock all exist too. So the calendar was quietly showing him
+   * other people's handles on his own posts.
+   *
+   * Only fill this in from a handle he has actually given, checked against the
+   * live profile. A guessed handle here is the same bug with more confidence.
+   */
+  handle?: string;
+  /**
    * Artwork this brand already publishes, as absolute URLs. Used ahead of the
    * page's share image, same as a Blob library — for a site that hosts good
    * pictures but doesn't set og:image on the pages that use them.
@@ -244,6 +258,9 @@ export const BRANDS: Brand[] = [
     colorHex: "#7C3AED",
     tagline: "Kids' learning site — 130+ lessons",
     active: true,
+    // Created 2026-08-22. Note the underscore: @emekaexplores without it is a
+    // different account with 506 followers and 588 posts.
+    handle: "@emeka_explores",
     // The book covers are served from emekabooks.com while the sitemap this
     // brand pulls from is emeka-books.com. Verified 2026-08-24: both hosts
     // return the identical 134,012-byte cover.jpg, and only the hyphenated one
@@ -530,6 +547,10 @@ export const BRANDS: Brand[] = [
     colorHex: "#534AB7",
     tagline: "Youth development nonprofit",
     active: true,
+    // Given by Lamont 2026-08-24 and checked: "Lamont (@wwsh_community_nyc)",
+    // 132 followers, 33 posts. The slug fallback would have said @wwsh, which
+    // is a different, dormant account.
+    handle: "@wwsh_community_nyc",
     // communitynyc.org serves the same chess-programme photo as og:image on
     // every page, so basketball posts were going out illustrated with chess.
     // Lift this the moment WWSH has real basketball photos in library/wwsh/.

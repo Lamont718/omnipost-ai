@@ -25,7 +25,7 @@ export interface PreviewBrand {
   slug: string;
   name: string;
   colorHex: string;
-  /** @handle for the mock. Falls back to the slug — set the real one in brands.ts. */
+  /** @handle for the mock. Falls back to the brand name — set the real one in brands.ts. */
   handle?: string;
 }
 
@@ -59,7 +59,14 @@ function initials(name: string): string {
 }
 
 function handleFor(brand: PreviewBrand): string {
-  return brand.handle ?? `@${brand.slug.replace(/-/g, "")}`;
+  // No @ when we don't know the handle. The old fallback built one out of the
+  // slug, and every single one of those turned out to be a real Instagram
+  // account belonging to someone else — @emekaexplores has 506 followers and
+  // 588 posts, and is not his. A mock-up that shows a stranger's handle on his
+  // post is worse than one that shows no handle at all, which is the same rule
+  // the image slot already follows by saying "No image attached" instead of
+  // inventing art.
+  return brand.handle ?? brand.name;
 }
 
 function domainOf(url?: string): string | null {

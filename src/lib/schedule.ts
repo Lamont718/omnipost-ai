@@ -22,6 +22,8 @@ export interface ScheduledPost {
   brandSlug: string;
   brandName: string;
   colorHex: string;
+  /** Real @handle, when the brand has one. Undefined means "don't claim one". */
+  handle?: string;
   /** Local calendar date, "YYYY-MM-DD". */
   date: string;
   time: string;
@@ -93,6 +95,7 @@ async function brandPostsInRange(
         brandSlug: brand.slug,
         brandName: brand.name,
         colorHex: brand.colorHex,
+        ...(brand.handle ? { handle: brand.handle } : {}),
         date,
         time: slot.time,
         platform: slot.platform,

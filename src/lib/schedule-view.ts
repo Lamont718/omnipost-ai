@@ -26,7 +26,7 @@ export interface SlotView {
   date: string;
   time: string;
   platform: Platform;
-  brand: { slug: string; name: string; colorHex: string };
+  brand: { slug: string; name: string; colorHex: string; handle?: string };
   topic: Topic;
   caption: string | null;
   /** Always a still: the poster frame when the post carries a clip. */
@@ -91,7 +91,12 @@ export async function buildSlotViews(start: Date, end: Date): Promise<SlotView[]
       date: p.date,
       time: p.time,
       platform: p.platform,
-      brand: { slug: p.brandSlug, name: p.brandName, colorHex: p.colorHex },
+      brand: {
+        slug: p.brandSlug,
+        name: p.brandName,
+        colorHex: p.colorHex,
+        ...(p.handle ? { handle: p.handle } : {}),
+      },
       topic: p.topic,
       caption,
       // Null until there's a caption: the generated card is built from the
