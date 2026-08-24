@@ -124,6 +124,15 @@ function renderPost(p: SlotView, origin: string): string {
   const caption = p.caption ?? "";
   const deepLink = `${origin}/calendar?post=${encodeURIComponent(p.id)}`;
 
+  // A generated card's URL is our own relative /api/post-image path. The
+  // calendar renders it in a browser that already knows the origin; an email
+  // client does not, so it resolves against nothing and the picture is a broken
+  // box. The whole point of putting the picture in the email is that a phone
+  // can long-press and save it, so this failed silently at exactly the step the
+  // email exists for. Affects every brand whose artwork falls through to a card
+  // — WWSH and The Conductor, 20 of the next ten weeks' posts.
+  const imageUrl = p.image?.startsWith("/") ? `${origin}${p.image}` : p.image;
+
   // No email client plays video, so a Reel shows its poster frame and links to
   // the file itself. Same-origin through /api/download, which is what makes a
   // phone save an .mp4 rather than open a tab it can do nothing with.
@@ -155,7 +164,7 @@ function renderPost(p: SlotView, origin: string): string {
           p.image
             ? `<div style="margin:0 0 10px;">${
                 clipLink ? `<a href="${escapeHtml(clipLink)}">` : ""
-              }<img src="${escapeHtml(p.image)}" alt="${escapeHtml(
+              }<img src="${escapeHtml(imageUrl ?? "")}" alt="${escapeHtml(
                 p.imageAlt ?? p.topic.title,
               )}" width="150" style="width:150px;max-width:100%;border-radius:8px;background:#f1f5f9;display:block;" />${
                 clipLink ? "</a>" : ""
