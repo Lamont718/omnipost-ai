@@ -161,6 +161,10 @@ export const BRANDS: Brand[] = [
     name: "YODM",
     colorHex: "#7C3AED",
     tagline: "Party debate card game",
+    // Given 2026-08-24 and checked: "Your Opinion Doesn't Matter
+    // (@yodm_debate)", 162 followers, 135 posts. The slug fallback said @yodm,
+    // which is somebody else.
+    handle: "@yodm_debate",
     // Was stood down on 2026-08-09 in favour of The Shop (repos/the-shop),
     // which writes YODM from the 92-card deck with its own rendered images and
     // a Critic agent. Turned back on the same day at Lamont's request.
