@@ -28,6 +28,14 @@ interface Readiness {
   x: boolean;
 }
 
+interface AccountCheck {
+  slug: string;
+  route: "page" | "direct";
+  ok: boolean;
+  username?: string;
+  error?: string;
+}
+
 interface SlotView {
   id: string;
   date: string;
@@ -49,6 +57,8 @@ interface Row {
   /** Written, still ahead, and a Reel — the publisher refuses these on purpose. */
   reels: number;
   connected: boolean;
+  /** What the platform says about the live token, once it has been asked. */
+  check?: AccountCheck;
 }
 
 const CARD: React.CSSProperties = {
@@ -88,13 +98,32 @@ function monthsAhead(count: number): string[] {
 
 export default function ConnectPage() {
   const [readiness, setReadiness] = useState<Readiness[] | null>(null);
+  const [checks, setChecks] = useState<AccountCheck[] | null>(null);
   const [slots, setSlots] = useState<SlotView[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/publish", { cache: "no-store" })
       .then((r) => r.json())
-      .then((j) => setReadiness(j.brands ?? []))
+      .then((j) => {
+        const brands: Readiness[] = j.brands ?? [];
+        setReadiness(brands);
+
+        // Asking each live token who it belongs to costs a round trip per
+        // account, so it only happens when there is an account to ask — and it
+        // is the whole reason "connected" is worth showing. A token that
+        // authenticates for the wrong account is exactly the failure this app
+        // has already shipped once, and a green light that only means "an
+        // environment variable is set" would repeat it.
+        if (brands.some((b) => b.instagram)) {
+          fetch("/api/publish?check=1", { cache: "no-store" })
+            .then((r) => r.json())
+            .then((c) => setChecks(c.checks ?? []))
+            .catch(() => setChecks([]));
+        } else {
+          setChecks([]);
+        }
+      })
       .catch(() => setError("Couldn't read what's connected."));
   }, []);
 
@@ -133,6 +162,10 @@ export default function ConnectPage() {
         sendable: 0,
         reels: 0,
         connected: p.platform === "instagram" ? !!ready?.instagram : !!ready?.x,
+        check:
+          p.platform === "instagram"
+            ? checks?.find((c) => c.slug === p.brand.slug)
+            : undefined,
       };
       if (p.video && p.platform === "instagram") row.reels++;
       else row.sendable++;
@@ -140,7 +173,7 @@ export default function ConnectPage() {
     }
 
     return Array.from(byBrand.values()).sort((a, b) => b.sendable - a.sendable);
-  }, [readiness, slots]);
+  }, [readiness, slots, checks]);
 
   const totals = useMemo(() => {
     const sendable = rows.reduce((n, r) => n + (r.connected ? 0 : r.sendable), 0);
@@ -229,6 +262,19 @@ export default function ConnectPage() {
                     {r.reels > 0 ? ` · ${r.reels} Reel${r.reels === 1 ? "" : "s"} by hand` : ""}
                   </span>
                 </div>
+                {r.connected && r.check && (
+                  <p
+                    style={{
+                      font: "400 12.5px/1.6 var(--font-geist-sans)",
+                      color: r.check.ok ? "#166534" : "#b91c1c",
+                      margin: "9px 0 0",
+                    }}
+                  >
+                    {r.check.ok
+                      ? `The token answers as @${r.check.username}. Check that is the right account.`
+                      : `The token isn't working: ${r.check.error ?? "no answer"}`}
+                  </p>
+                )}
                 {!r.connected && (
                   <p
                     style={{
@@ -289,7 +335,10 @@ function Steps() {
             font: "400 14px/1.75 var(--font-geist-sans)",
             color: "#334155",
             margin: "10px 0 0",
-            paddingLeft: 20,
+            paddingLeft: 22,
+            // Tailwind's reset takes the markers off every list in the app, and
+            // a numbered list with no numbers stops reading as steps at all.
+            listStyle: "decimal outside",
           }}
         >
           <li>
@@ -324,7 +373,10 @@ function Steps() {
             font: "400 14px/1.75 var(--font-geist-sans)",
             color: "#334155",
             margin: "10px 0 0",
-            paddingLeft: 20,
+            paddingLeft: 22,
+            // Tailwind's reset takes the markers off every list in the app, and
+            // a numbered list with no numbers stops reading as steps at all.
+            listStyle: "decimal outside",
           }}
         >
           <li>
