@@ -53,6 +53,15 @@ export interface StoredCaption extends GenerateResponse {
   /** ISO timestamp of when it was written. */
   generatedAt: string;
   /**
+   * Set when a human changed the words afterwards, rather than regenerating.
+   *
+   * Kept separate from `generatedAt` so the two questions stay separate: how
+   * old is this writing, and has anyone touched it since. A hand-edit that
+   * moved `generatedAt` would make an edited caption look freshly written and
+   * hide the fact that someone disagreed with what the model produced.
+   */
+  editedAt?: string;
+  /**
    * The topic this caption was actually written from, frozen at the moment it
    * was written.
    *

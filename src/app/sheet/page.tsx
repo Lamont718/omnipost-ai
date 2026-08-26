@@ -414,10 +414,18 @@ export default function SheetPage() {
               color: "#475569",
             }}
           >
+            {/*
+              This used to point at a markdown file in the repo, which is not a
+              place anyone reads on the morning they are trying to post. It
+              points at the page instead, which counts what is actually waiting.
+            */}
             <strong style={{ color: "#0f172a" }}>No accounts connected yet.</strong> Copy and Save
-            image work as they always have. Add the Instagram, Facebook and X credentials to the
-            environment and a <strong>Post now</strong> button appears on every row that can go out
-            — see <code style={{ fontSize: 11.5 }}>docs/connecting-accounts.md</code> in the repo.
+            image work as they always have. Add the Instagram, Facebook and X credentials and a{" "}
+            <strong>Post now</strong> button appears on every row that can go out —{" "}
+            <Link href="/connect" style={{ color: "#4f46e5", fontWeight: 600 }}>
+              see what each brand needs
+            </Link>
+            .
           </div>
         )}
 
