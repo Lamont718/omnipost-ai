@@ -243,9 +243,17 @@ export default function SheetPage() {
       <style>{printCss}</style>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px 80px" }}>
-        <div className="no-print">
+        <div className="no-print" style={{ display: "flex", gap: 16, alignItems: "baseline" }}>
           <Link href="/calendar" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none" }}>
             ← Back to the calendar
+          </Link>
+          {/*
+            Every row below is copied out by hand. The publisher that could send
+            them exists and is switched off, which is worth saying on the page
+            where the hand-copying happens rather than only in a code comment.
+          */}
+          <Link href="/connect" style={{ fontSize: 13, color: "#4f46e5", textDecoration: "none", fontWeight: 600 }}>
+            Publishing →
           </Link>
         </div>
 

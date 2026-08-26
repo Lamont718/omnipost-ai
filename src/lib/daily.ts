@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { buildSlotViews, SlotView } from "./schedule-view";
 import { readPosted } from "./posted";
 import { readPublished } from "./published";
+import { shareableKey } from "./gate";
 import type { Platform } from "./types";
 
 /**
@@ -229,6 +230,17 @@ export function renderDailyHtml(plan: DailyPlan, origin: string): string {
         } slot${plan.unwrittenCount === 1 ? " has" : "s have"} no caption written for today.</p>`
       : "";
 
+  // Writing, posting and editing the facts are locked; reading is not. One tap
+  // on this leaves a cookie that lasts a year, so the lock is something he meets
+  // once and never again — which is the only version of a lock that survives
+  // contact with a Tuesday morning.
+  const key = shareableKey();
+  const unlockLine = key
+    ? ` <a href="${escapeHtml(
+        `${origin}/api/unlock?key=${encodeURIComponent(key)}&next=/sheet`,
+      )}" style="color:#94a3b8;text-decoration:underline;">Unlock this device</a> if a button ever says it's locked.`
+    : "";
+
   return `<div style="max-width:620px;margin:0 auto;padding:22px;background:#f8fafc;">
     ${header}
     ${gap}
@@ -240,7 +252,7 @@ export function renderDailyHtml(plan: DailyPlan, origin: string): string {
     </div>
     <p style="font:400 11.5px/1.6 ${SANS};color:#94a3b8;margin:18px 0 0;">
       Sent by OmniPost each morning at 8am. Ticking a post off — here, on the sheet, or on the
-      calendar — takes it out of tomorrow's email.
+      calendar — takes it out of tomorrow's email.${unlockLine}
     </p>
   </div>`;
 }
