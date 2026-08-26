@@ -124,15 +124,29 @@ function partPath(id: string): string {
   return `${PART_PREFIX}${encodeURIComponent(id)}.json`;
 }
 
-/** Fetch a blob body as JSON, cache-busted. Null on any failure. */
-async function fetchJson<T>(url: string): Promise<T | null> {
-  try {
-    const res = await fetch(`${url}?t=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
+/**
+ * Fetch a blob body as JSON, cache-busted. Null once it has genuinely failed.
+ *
+ * The retries are not defensive padding. A part blob that has just been written
+ * answers **404 at the exact URL `list()` reports for it**, for a minute or two
+ * after the write — measured on 26 August 2026, when 14 of 33 parts saved
+ * moments earlier were unreadable while the other 19 were fine. Without a
+ * retry, `readCaptions` skips that part and returns the copy in the base
+ * instead, which is the version from before the edit. Nothing errors. The
+ * caption simply appears not to have saved, then appears to save itself later,
+ * and a caller re-editing in between overwrites work that was never lost.
+ */
+async function fetchJson<T>(url: string, attempts = 3): Promise<T | null> {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const res = await fetch(`${url}?t=${Date.now()}-${attempt}`, { cache: "no-store" });
+      if (res.ok) return (await res.json()) as T;
+    } catch {
+      // Network-level failure; treated the same as a bad status.
+    }
+    if (attempt < attempts) await new Promise((r) => setTimeout(r, 250 * attempt));
   }
+  return null;
 }
 
 async function inChunks<T, R>(items: T[], size: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -165,10 +179,25 @@ export async function readCaptions(): Promise<CaptionMap> {
     );
 
     const merged: CaptionMap = { ...base };
+    let unreadable = 0;
     for (const p of parts) {
-      if (!p?.id) continue;
+      if (!p?.id) {
+        unreadable++;
+        continue;
+      }
       const { id, ...caption } = p;
       merged[id] = caption as StoredCaption;
+    }
+
+    // Said out loud, because the consequence is invisible: every part that
+    // could not be read is a caption served from the base at whatever it said
+    // before that part was written. That is stale content presented as current,
+    // and silence about it is what made it take an afternoon to notice.
+    if (unreadable > 0) {
+      console.error(
+        `readCaptions: ${unreadable} of ${partList.blobs.length} parts unreadable — ` +
+          `those slots are being served from the compacted base and may be out of date`,
+      );
     }
     return merged;
   } catch (err) {
