@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readCaptions, writeCaptions } from "@/lib/store";
+import { brandBySlug } from "@/lib/brands";
+import { pinnable, videosFor } from "@/lib/video-library";
 import { PLATFORM_LIMIT } from "@/lib/compose";
 import type { Platform } from "@/lib/types";
 
@@ -18,7 +20,12 @@ export const dynamic = "force-dynamic";
  * neither edit.
  *
  *   POST /api/caption
- *   { "id": "<slot id>", "caption": "the new words" }
+ *   { "id": "<slot id>", "caption": "the new words", "videoName"?: "13-emeka-moon" }
+ *
+ * `videoName` swaps which clip a Reel carries. On a Reel the clip is the post —
+ * it is what a stranger sees before a word of the caption — and until now the
+ * only way to change it was to regenerate the caption and hope the rotation
+ * landed somewhere else.
  *
  * Everything else about the record is preserved — the topic it was written
  * from, the clip it was written against, when it was generated. Those are what
@@ -36,13 +43,20 @@ function platformOf(id: string): Platform | null {
   return match ? (match[1] as Platform) : null;
 }
 
+/** The brand is the first. */
+function brandOf(id: string): string {
+  return id.split(":")[0] ?? "";
+}
+
 export async function POST(request: NextRequest) {
   let id = "";
   let caption = "";
+  let videoName = "";
   try {
     const body = await request.json();
     id = String(body?.id ?? "").trim();
     caption = String(body?.caption ?? "");
+    videoName = String(body?.videoName ?? "").trim();
   } catch {
     return NextResponse.json({ error: "expected a JSON body" }, { status: 400 });
   }
@@ -78,15 +92,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolved against the brand's real library rather than trusted from the
+    // body: a made-up name would otherwise be written straight onto the post and
+    // the Reel would render a broken video with a caption composed for it.
+    let video = existing.video;
+    if (videoName) {
+      const slug = brandOf(id);
+      const brand = brandBySlug(slug);
+      if (!brand) {
+        return NextResponse.json({ error: `unknown brand: ${slug}` }, { status: 404 });
+      }
+      const match = (await videosFor(slug)).find((v) => v.name === videoName);
+      if (!match) {
+        return NextResponse.json(
+          { error: `${brand.name} has no clip called "${videoName}"` },
+          { status: 404 },
+        );
+      }
+      video = pinnable(match);
+    }
+
     const written = await writeCaptions({
-      [id]: { ...existing, caption, editedAt: new Date().toISOString() },
+      [id]: {
+        ...existing,
+        caption,
+        ...(video ? { video } : {}),
+        editedAt: new Date().toISOString(),
+      },
     });
     if (!written) {
       return NextResponse.json({ error: "could not save that" }, { status: 500 });
     }
 
     return NextResponse.json(
-      { id, saved: true, length: caption.length },
+      { id, saved: true, length: caption.length, video: video?.name ?? null },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
