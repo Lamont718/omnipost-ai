@@ -615,7 +615,21 @@ export const BRANDS: Brand[] = [
     name: "The Conductor",
     colorHex: "#0EA5E9",
     tagline: "NYC subway & bus history",
-    active: true,
+    /*
+     * Off, 2026-08-27, because Lamont decided there will be no social account
+     * for this one. Not "not yet" — not at all.
+     *
+     * It had been writing a post every Wednesday into nothing: 14 written, 9 of
+     * them still ahead, 5 already sitting in the backlog. Leaving it on would
+     * have kept spending the weekly writer's budget on an audience that is
+     * never going to exist, and kept five rows in a list of missed posts that
+     * could not be missed.
+     *
+     * Nothing is deleted. The captions stay in storage keyed by slot id and are
+     * simply never resolved again; flipping this back to true brings all of it
+     * straight back.
+     */
+    active: false,
     // Every page returns the same /opengraph-image — verified on /bus/B31 and
     // /bus/B41 — so a post about one route would carry the site's generic card.
     sitewideShareImage: true,
