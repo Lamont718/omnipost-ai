@@ -204,6 +204,13 @@ export async function composePost(opts: {
    */
   examples?: string[];
   /**
+   * Captions this brand has already published about this exact topic.
+   *
+   * Not tone examples — the opposite. These are the things not to say again.
+   * See `priorCaptionsForTopic` in lib/store.ts for why they exist.
+   */
+  alreadySaid?: string[];
+  /**
    * True things about the brand, typed by Lamont on /facts. These ARE usable
    * specifics — a human wrote them down deliberately, which is precisely the
    * grounding the thin-page brands never had.
@@ -220,7 +227,7 @@ export async function composePost(opts: {
    */
   media?: PostMedia;
 }): Promise<GenerateResponse> {
-  const { brand, topic, platform, toneOverride, examples, brandFacts, budget, media } =
+  const { brand, topic, platform, toneOverride, examples, alreadySaid, brandFacts, budget, media } =
     opts;
   const system = buildSystemPrompt(brand.name, brand.voice, platform, media);
 
@@ -287,6 +294,21 @@ ${media.describes}
     parts.push(
       "HARD CONSTRAINTS FOR THIS TOPIC — these override everything above:\n" +
         constraints.map((c) => `- ${c.rule}`).join("\n"),
+    );
+  }
+
+  // What this brand has already posted about this same topic. Placed before the
+  // tone examples deliberately: the examples say "sound like this", and a rule
+  // about what not to repeat has to be read before an invitation to imitate.
+  if (alreadySaid?.length) {
+    parts.push(
+      "ALREADY POSTED BY THIS BRAND ABOUT THIS EXACT TOPIC:\n" +
+        alreadySaid.map((c, i) => `${i + 1}. """${c}"""`).join("\n\n") +
+        "\n\nThis is a repeat visit to the same subject, which is fine — saying the " +
+        "same thing again is not. Take a different angle: a different opening line, a " +
+        "different specific from the facts above, a different question or call to " +
+        "action. If the only honest angle is one of the above, say it in genuinely " +
+        "different words rather than reordering theirs. These carry no new facts.",
     );
   }
 

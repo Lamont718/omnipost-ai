@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { scheduledPostsInRange } from "@/lib/schedule";
 import { brandBySlug } from "@/lib/brands";
 import { composePost } from "@/lib/compose";
-import { compactCaptions, readCaptions, writeCaptions, CaptionMap } from "@/lib/store";
+import {
+  compactCaptions,
+  priorCaptionsForTopic,
+  readCaptions,
+  writeCaptions,
+  CaptionMap,
+} from "@/lib/store";
 import { loadExampleBank, pickExamples } from "@/lib/examples";
 import { readAllFacts, factsForSlot } from "@/lib/facts";
 import {
@@ -104,9 +110,12 @@ export async function GET(request: Request) {
     // replaced captions that were already reviewed. `&force=1` restores the old
     // behaviour when a reroll really is wanted.
     const force = params.get("force") === "1";
+    // Read unconditionally now, not only when skipping: the writer is shown
+    // what this brand has already said about the same topic, and a forced
+    // reroll needs that just as much as a first pass does.
+    const already = await readCaptions();
     let skipped = 0;
     if (!force) {
-      const already = await readCaptions();
       const before = slots.length;
       slots = slots.filter((s) => !already[s.id]?.caption);
       skipped = before - slots.length;
@@ -180,6 +189,16 @@ export async function GET(request: Request) {
               topic: { title: slot.topic.title, context: slot.topic.context },
               platform: slot.platform,
               examples: pickExamples(exampleBank, slot.brandSlug, slot.platform),
+              // Against what is already stored plus what this run has written
+              // so far. Within one twelve-slot chunk the writes are concurrent,
+              // so two slots on the same topic in the same chunk can still miss
+              // each other — across chunks and across runs they do not.
+              alreadySaid: priorCaptionsForTopic(
+                { ...already, ...captions },
+                slot.brandSlug,
+                slot.topic,
+                slot.id,
+              ),
               brandFacts: factsForSlot(allFacts[slot.brandSlug]?.facts ?? [], slot.id),
               budget,
               media: clip ? { kind: "video", describes: clip.describes } : undefined,

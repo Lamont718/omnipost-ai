@@ -101,6 +101,46 @@ export interface StoredCaption extends GenerateResponse {
 
 export type CaptionMap = Record<string, StoredCaption>;
 
+/**
+ * What has already been said about this exact topic, newest first.
+ *
+ * Topics come round again — the rotation walks a brand's sitemap and a site
+ * with twenty pages and a weekly slot revisits one every few months. That is
+ * fine, and re-posting a subject is the point of a calendar. Writing the same
+ * words about it twice is not: MostHatedNBA got two Latrell Sprewell posts six
+ * weeks apart that differed by a colon and a question mark, because the writer
+ * had never been shown the first one.
+ *
+ * Matched on the pinned topic URL where there is one, and on the title
+ * otherwise — the URL is the identity of a page, the title is all an evergreen
+ * topic has. Same brand only: two brands writing about the same subject in
+ * their own voices is not a repeat.
+ */
+export function priorCaptionsForTopic(
+  captions: CaptionMap,
+  brandSlug: string,
+  topic: { title: string; url?: string },
+  excludeId: string,
+  limit = 2,
+): string[] {
+  const prefix = `${brandSlug}:`;
+  const matches: { at: string; caption: string }[] = [];
+
+  for (const [id, stored] of Object.entries(captions)) {
+    if (id === excludeId || !id.startsWith(prefix) || !stored?.caption) continue;
+    const pinned = stored.topic;
+    if (!pinned) continue;
+    const same = topic.url && pinned.url ? pinned.url === topic.url : pinned.title === topic.title;
+    if (!same) continue;
+    matches.push({ at: stored.editedAt ?? stored.generatedAt ?? "", caption: stored.caption });
+  }
+
+  return matches
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, limit)
+    .map((m) => m.caption);
+}
+
 /** The compacted map. Written only by compactCaptions. */
 const BASE_KEY = "captions.json";
 /** One blob per caption, written by on-demand saves. */

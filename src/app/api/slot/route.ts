@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { brandBySlug } from "@/lib/brands";
 import { composePost } from "@/lib/compose";
-import { writeCaptions } from "@/lib/store";
+import { priorCaptionsForTopic, readCaptions, writeCaptions } from "@/lib/store";
 import { loadExampleBank, pickExamples } from "@/lib/examples";
 import { readAllFacts, factsForSlot } from "@/lib/facts";
 import {
@@ -69,6 +69,11 @@ export async function POST(request: NextRequest) {
       platform,
       toneOverride: tone_override,
       examples: pickExamples(await loadExampleBank(), slug, platform),
+      // What this brand has already said about this same subject. A reroll of
+      // one slot is exactly where a near-duplicate slips in: the topic is the
+      // same by definition, and until now the writer could not see the post
+      // sitting six weeks away on the same page.
+      alreadySaid: priorCaptionsForTopic(await readCaptions(), slug, topic, id),
       brandFacts: factsForSlot((await readAllFacts())[slug]?.facts ?? [], id),
       media: clip ? { kind: "video", describes: clip.describes } : undefined,
     });
