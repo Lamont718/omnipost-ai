@@ -265,8 +265,8 @@ export const BRANDS: Brand[] = [
     // Created 2026-08-22. Note the underscore: @emekaexplores without it is a
     // different account with 506 followers and 588 posts.
     handle: "@emeka_explores",
-    // The book covers are served from emekabooks.com while the sitemap this
-    // brand pulls from is emeka-books.com. Verified 2026-08-24: both hosts
+    // The book covers are served from emekabooks.com, which is now also the
+    // host this brand's sitemap is read from. Verified 2026-08-24: both hosts
     // return the identical 134,012-byte cover.jpg, and only the hyphenated one
     // was on the allowlist.
     artworkHosts: ["emekabooks.com", "www.emekabooks.com"],
@@ -478,7 +478,11 @@ export const BRANDS: Brand[] = [
         // /pages/<slug>/cover.jpg and its real jacket copy as the meta
         // description — which is the whole reason these are worth posting: the
         // grounding is the publisher's own words, not a summary of a summary.
-        sitemap: "https://emeka-books.com/sitemap.xml",
+        // emekabooks.com, no hyphen. The hyphenated host is a legacy alias
+        // that 308s here — verified 2026-08-27 — and every <loc> in this
+        // sitemap already names the canonical one. Pointing at the redirect
+        // cost a round trip and made the wrong domain look official.
+        sitemap: "https://emekabooks.com/sitemap.xml",
         include: [/\/books\/[a-z0-9-]+$/i],
         exclude: BOILERPLATE,
         tag: "books",

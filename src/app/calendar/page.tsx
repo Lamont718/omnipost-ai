@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { ShareButton } from "@/components/ShareButton";
 import {
@@ -105,15 +105,30 @@ export default function CalendarPage() {
     load();
   }, [load]);
 
-  // ?post=<slot id> opens that post straight away, so a single post can be
-  // linked to instead of described ("open the calendar, find Tuesday…").
+  /*
+   * ?post=<slot id> opens that post straight away, so a single post can be
+   * linked to instead of described ("open the calendar, find Tuesday…").
+   *
+   * Once, and only once. This used to depend on `selected`, which made the
+   * close button dead on exactly the path that matters most: the 8am email
+   * links here as /calendar?post=<id>, so pressing × set `selected` to null,
+   * that re-ran this effect, the parameter was still in the URL, and the post
+   * re-opened in the same frame. The modal looked stuck.
+   *
+   * The ref is what makes it a one-shot — a piece of state would re-render and
+   * a second effect would race it. Consumed as soon as any month has loaded,
+   * whether or not the post was in it, so a link to a post outside the current
+   * month fails to open rather than springing open later.
+   */
+  const deepLinkUsed = useRef(false);
   useEffect(() => {
-    if (selected || posts.length === 0) return;
+    if (deepLinkUsed.current || posts.length === 0) return;
+    deepLinkUsed.current = true;
     const want = new URLSearchParams(window.location.search).get("post");
     if (!want) return;
     const hit = posts.find((p) => p.id === want);
     if (hit) setSelected(hit);
-  }, [posts, selected]);
+  }, [posts]);
 
   function captionFor(p: SlotPost): string | null {
     return localCaptions[p.id] ?? p.caption;
