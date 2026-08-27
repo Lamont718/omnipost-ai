@@ -12,10 +12,9 @@ import { canSharePosts, primeShareFile, sharePost } from "@/lib/share-post";
  * just happened ("caption copied — paste it"), and a dismissed share sheet says
  * nothing at all, because he dismissed it on purpose.
  *
- * It renders only where a share sheet exists, which in practice means his phone.
- * On a desktop there is nothing to hand a file to, so Copy caption and Save
- * image stay exactly as they were rather than being joined by a button that
- * fails on press.
+ * It renders only where a share sheet exists — every phone, and Windows Chrome,
+ * which has one too. Where there isn't one, Copy caption and Save image stay
+ * exactly as they were rather than being joined by a button that fails on press.
  */
 export function ShareButton({
   href,
