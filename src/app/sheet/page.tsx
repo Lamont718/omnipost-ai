@@ -145,6 +145,19 @@ export default function SheetPage() {
       });
   }, []);
 
+  // ?missed=1 opens straight into the backlog. The morning email links here, and
+  // "48 written posts never went out" that lands you on the normal sheet and
+  // asks you to spot a red button is a link that half works.
+  //
+  // Read off window rather than useSearchParams: this page is statically
+  // prerendered, and that hook drags a Suspense boundary in with it for a
+  // parameter that is only ever read once, after mount.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("missed") === "1") {
+      setShowMissed(true);
+    }
+  }, []);
+
   useEffect(() => {
     fetch("/api/sent")
       .then((r) => r.json())

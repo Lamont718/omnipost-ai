@@ -249,9 +249,9 @@ export function renderDailyHtml(plan: DailyPlan, origin: string, missedCount = 0
     missedCount > 0
       ? `<p style="font:400 12.5px/1.6 ${SANS};color:#94a3b8;margin:14px 0 0;">
       <a href="${escapeHtml(
-        `${origin}/sheet`,
+        `${origin}/sheet?missed=1`,
       )}" style="color:#b91c1c;text-decoration:none;font-weight:600;">${missedCount} written posts never went out</a>
-      — still good, most of them. They're behind the red button on the sheet.
+      — still good, most of them. This opens the list.
     </p>`
       : "";
 
