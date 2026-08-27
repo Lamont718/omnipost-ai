@@ -195,7 +195,7 @@ function renderPost(p: SlotView, origin: string): string {
   </table>`;
 }
 
-export function renderDailyHtml(plan: DailyPlan, origin: string): string {
+export function renderDailyHtml(plan: DailyPlan, origin: string, missedCount = 0): string {
   const count = plan.due.length;
 
   const header = `
@@ -241,6 +241,20 @@ export function renderDailyHtml(plan: DailyPlan, origin: string): string {
       )}" style="color:#94a3b8;text-decoration:underline;">Unlock this device</a> if a button ever says it's locked.`
     : "";
 
+  // One line, below the button, never in the subject and never above today's
+  // work. The backlog is real and worth seeing, but an email that leads with
+  // what you failed to do is an email you stop opening — and today's two posts
+  // are the ones that still have their day.
+  const missedLine =
+    missedCount > 0
+      ? `<p style="font:400 12.5px/1.6 ${SANS};color:#94a3b8;margin:14px 0 0;">
+      <a href="${escapeHtml(
+        `${origin}/sheet`,
+      )}" style="color:#b91c1c;text-decoration:none;font-weight:600;">${missedCount} written posts never went out</a>
+      — still good, most of them. They're behind the red button on the sheet.
+    </p>`
+      : "";
+
   return `<div style="max-width:620px;margin:0 auto;padding:22px;background:#f8fafc;">
     ${header}
     ${gap}
@@ -250,6 +264,7 @@ export function renderDailyHtml(plan: DailyPlan, origin: string): string {
         origin,
       )}/sheet" style="display:inline-block;background:#4f46e5;color:#ffffff;font:700 14px/1 ${SANS};text-decoration:none;border-radius:8px;padding:13px 20px;">Open the posting sheet</a>
     </div>
+    ${missedLine}
     <p style="font:400 11.5px/1.6 ${SANS};color:#94a3b8;margin:18px 0 0;">
       Sent by OmniPost each morning at 8am. Ticking a post off — here, on the sheet, or on the
       calendar — takes it out of tomorrow's email.${unlockLine}
@@ -264,7 +279,12 @@ export interface SendResult {
   reason?: string;
 }
 
-export async function sendDaily(to: string, plan: DailyPlan, origin: string): Promise<SendResult> {
+export async function sendDaily(
+  to: string,
+  plan: DailyPlan,
+  origin: string,
+  missedCount = 0,
+): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { sent: false, reason: "RESEND_API_KEY is not set" };
 
@@ -281,7 +301,7 @@ export async function sendDaily(to: string, plan: DailyPlan, origin: string): Pr
       count === 0
         ? `Nothing to post today — ${longDate(plan.date)}`
         : `${count} to post today: ${Array.from(new Set(plan.due.map((p) => p.brand.name))).join(", ")}`,
-    html: renderDailyHtml(plan, origin),
+    html: renderDailyHtml(plan, origin, missedCount),
   });
 
   if (error) return { sent: false, reason: `Resend: ${error.message}` };

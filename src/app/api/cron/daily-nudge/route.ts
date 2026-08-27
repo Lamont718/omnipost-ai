@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { hourInZone, planForDay, renderDailyHtml, sendDaily, todayInZone } from "@/lib/daily";
 import { recordSend } from "@/lib/sent-log";
+import { missedPosts } from "@/lib/backlog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,13 +69,17 @@ export async function GET(request: Request) {
 
   try {
     const plan = await planForDay(date);
+    // Counted here rather than inside planForDay: lib/backlog needs the New
+    // York clock from lib/daily, and having daily import backlog back would put
+    // a cycle between two modules the cron loads on every run.
+    const missedCount = (await missedPosts(date)).length;
 
     // The origin the links and pictures resolve against, taken from the request
     // so a preview deployment links to itself rather than to production.
     const origin = process.env.PUBLIC_ORIGIN ?? new URL(request.url).origin;
 
     if (preview) {
-      return new NextResponse(renderDailyHtml(plan, origin), {
+      return new NextResponse(renderDailyHtml(plan, origin, missedCount), {
         headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
       });
     }
@@ -104,7 +109,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const result = await sendDaily(to, plan, origin);
+    const result = await sendDaily(to, plan, origin, missedCount);
 
     // After the send, never before: a record written first would describe an
     // email that might not exist. The hour-gate skip above is deliberately not
