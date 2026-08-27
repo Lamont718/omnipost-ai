@@ -28,6 +28,31 @@ function hasBlob(): boolean {
   return !!process.env.BLOB_READ_WRITE_TOKEN;
 }
 
+/**
+ * The part of a filename that has to appear in the topic for it to match.
+ *
+ * A trailing `-1`, `-2`, `-3` is a numbering, not a subject: `basketball-2.jpg`
+ * is a second basketball photograph, and it should match every post a plain
+ * `basketball.jpg` matches. That is the whole convention — drop several photos
+ * for one topic, number them, and the rotation below spreads them across the
+ * posts on that topic rather than showing the first one every time.
+ *
+ * Only a trailing number counts. `08-emeka-welcome-smile` keeps its leading
+ * number, because that one orders the clips and is part of the name.
+ */
+function matchKey(image: LibraryImage): string {
+  return image.name.toLowerCase().replace(/-\d+$/, "");
+}
+
+/** Stable per-slot number: the same post always lands on the same picture. */
+function slotHash(slotId: string): number {
+  let hash = 0;
+  for (let i = 0; i < slotId.length; i++) {
+    hash = (hash * 31 + slotId.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
 function nameOf(url: string): string {
   return url.split("?")[0].split("/").pop()?.replace(/\.[a-z0-9]+$/i, "") ?? "";
 }
@@ -84,15 +109,21 @@ export function pickForSlot(
   // the longest match so "friedchicken" beats a stray "chicken".
   if (hint) {
     const flat = hint.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const matches = images
-      .filter((i) => i.name.length >= 4 && flat.includes(i.name.toLowerCase()))
-      .sort((a, b) => b.name.length - a.name.length);
-    if (matches.length > 0) return matches[0];
+    const matches = images.filter(
+      (i) => matchKey(i).length >= 4 && flat.includes(matchKey(i)),
+    );
+    if (matches.length > 0) {
+      // Keep only the most specific matches, then rotate between them. Before
+      // this it was `matches[0]` after a sort, which meant a brand with four
+      // posts about the same topic showed the same photograph four times —
+      // the exact "one identical picture all month" failure the library was
+      // built to end, arriving through the matching rule instead of the
+      // absence of pictures.
+      const best = Math.max(...matches.map((i) => matchKey(i).length));
+      const tied = matches.filter((i) => matchKey(i).length === best);
+      return tied[slotHash(slotId) % tied.length];
+    }
   }
 
-  let hash = 0;
-  for (let i = 0; i < slotId.length; i++) {
-    hash = (hash * 31 + slotId.charCodeAt(i)) | 0;
-  }
-  return images[Math.abs(hash) % images.length];
+  return images[slotHash(slotId) % images.length];
 }
