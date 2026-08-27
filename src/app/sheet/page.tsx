@@ -769,7 +769,7 @@ function PostRow({
       }}
     >
       {/* Picture, or the clip when this one is a Reel */}
-      <div style={{ flex: "0 0 auto", width: 108 }}>
+      <div className="sheet-media" style={{ flex: "0 0 auto", width: 108 }}>
         {post.video ? (
           <video
             src={post.video}
@@ -1133,6 +1133,23 @@ const actionStyle: React.CSSProperties = {
 const printCss = `
 @media (max-width: 560px) {
   .sheet-row { flex-direction: column; }
+  /*
+    On a phone the row stacks, and a 108px thumbnail sitting in a 390px column
+    left most of the card empty and the picture too small to judge. This is the
+    screen he posts from: the picture he is about to send should be the size he
+    is about to send it at, not a stamp beside it.
+
+    The sizes are inline on the elements, so these have to be !important —
+    everything else about the row is styled the same way and this is the one
+    place the two systems meet.
+  */
+  .sheet-media { width: 100% !important; }
+  .sheet-media img,
+  .sheet-media video {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 62vh;
+  }
 }
 @media print {
   .no-print { display: none !important; }
