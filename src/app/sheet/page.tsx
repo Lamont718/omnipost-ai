@@ -460,6 +460,23 @@ export default function SheetPage() {
         <div style={{ fontSize: 13, color: "#64748b", margin: "10px 0 22px", lineHeight: 1.6 }}>
           {loading ? (
             "Loading…"
+          ) : showMissed ? (
+            /*
+              The schedule's sentence — "0 of 48 posted from today onwards" —
+              was both useless and wrong here: a backlog row drops out the
+              instant it is ticked, so the left-hand number is always 0, and
+              none of these are from today onwards. What's worth knowing about
+              a pile is how big it is and how far back it goes.
+            */
+            <>
+              <strong style={{ color: "#0f172a" }}>
+                {rows.length} still waiting
+              </strong>{" "}
+              {brandSlug === "all" ? "across all brands" : ""}
+              {rows.length > 0 &&
+                `, back to ${format(parseISO(rows[rows.length - 1].date), "MMMM d")}`}
+              . Each one drops off this list the moment you tick it.
+            </>
           ) : (
             <>
               <strong style={{ color: "#0f172a" }}>
