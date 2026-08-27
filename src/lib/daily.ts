@@ -188,7 +188,7 @@ function renderPost(p: SlotView, origin: string): string {
           ${escapeHtml(p.topic.title)}
           &nbsp;·&nbsp;<a href="${escapeHtml(
             deepLink,
-          )}" style="color:#4f46e5;text-decoration:none;font-weight:600;">copy &amp; tick off ↗</a>
+          )}" style="color:#4f46e5;text-decoration:none;font-weight:600;">share &amp; tick off ↗</a>
         </div>
       </td>
     </tr>

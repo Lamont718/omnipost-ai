@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { generatedImageUrl, PLATFORM_LIMIT } from "@/components/PostPreview";
+import { ShareButton } from "@/components/ShareButton";
 import { Platform } from "@/lib/types";
 import { usePosted } from "@/lib/use-posted";
 import { useFeedback } from "@/lib/use-feedback";
@@ -262,7 +263,9 @@ export default function SheetPage() {
         </h1>
         <p style={{ color: "#64748b", fontSize: 14, margin: 0, lineHeight: 1.55 }}>
           Every written post, in the order it goes out. Copy the words, save the picture, tick it
-          off.
+          off. On a phone, <strong style={{ color: "#334155" }}>Share</strong> hands the picture
+          straight to Instagram and puts the caption on the clipboard to paste — Instagram takes the
+          file but never the words, so both happen in the one tap.
         </p>
 
         {/* Controls */}
@@ -419,8 +422,8 @@ export default function SheetPage() {
               place anyone reads on the morning they are trying to post. It
               points at the page instead, which counts what is actually waiting.
             */}
-            <strong style={{ color: "#0f172a" }}>No accounts connected yet.</strong> Copy and Save
-            image work as they always have. Add the Instagram, Facebook and X credentials and a{" "}
+            <strong style={{ color: "#0f172a" }}>No accounts connected yet.</strong> Share, Copy and
+            Save image work as they always have. Add the Instagram, Facebook and X credentials and a{" "}
             <strong>Post now</strong> button appears on every row that can go out —{" "}
             <Link href="/connect" style={{ color: "#4f46e5", fontWeight: 600 }}>
               see what each brand needs
@@ -516,6 +519,11 @@ function PostRow({
   error?: string;
   onPublish: () => void;
 }) {
+  // Set once the share sheet has actually been used, so the row can point at
+  // the one thing left to do. Not persisted and not a claim that it went out —
+  // only the tick means that, and the tick stays his to press.
+  const [justShared, setJustShared] = useState(false);
+
   const caption = post.caption ?? "";
   const imageUrl = post.image ?? generatedImageUrl(post.brand.slug, caption);
   // A Reel: the clip is the thing to save, the still is only its poster.
@@ -751,6 +759,21 @@ function PostRow({
             </button>
           ) : null}
 
+          {/*
+            First, and only on a phone. Everything to its right is the desktop
+            path — copy the words, save the file, tick it — and stays put.
+          */}
+          {!live && (
+            <ShareButton
+              href={downloadHref}
+              caption={caption}
+              platform={post.platform}
+              isVideo={!!post.video}
+              style={actionStyle}
+              onShared={() => setJustShared(true)}
+            />
+          )}
+
           <button className="no-print" onClick={onCopy} style={actionStyle}>
             {copied ? "Copied ✓" : "Copy caption"}
           </button>
@@ -759,11 +782,13 @@ function PostRow({
             onClick={onToggle}
             style={{
               ...actionStyle,
-              borderColor: posted ? "#bbf7d0" : "#e2e8f0",
-              color: posted ? "#15803d" : "#334155",
+              borderColor: posted ? "#bbf7d0" : justShared ? "#c7d2fe" : "#e2e8f0",
+              background: !posted && justShared ? "#eef2ff" : "#fff",
+              color: posted ? "#15803d" : justShared ? "#4338ca" : "#334155",
+              fontWeight: !posted && justShared ? 700 : undefined,
             }}
           >
-            {posted ? "Posted ✓ — undo" : "Mark as posted"}
+            {posted ? "Posted ✓ — undo" : justShared ? "Posted it? Tick here" : "Mark as posted"}
           </button>
 
           {/*

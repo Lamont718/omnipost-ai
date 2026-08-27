@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { ShareButton } from "@/components/ShareButton";
 import {
   startOfMonth,
   endOfMonth,
@@ -614,6 +615,20 @@ function PostDetail({
           <button onClick={generate} disabled={busy} style={primaryBtn}>
             {busy ? "Writing…" : caption ? "Rewrite" : "Write this post"}
           </button>
+          {/*
+            This modal is where the 8am email lands — its per-post link is
+            /calendar?post=<id> — so the one-tap path has to exist here and not
+            only on the sheet. Phone only; it renders nothing on a desktop.
+          */}
+          {caption && (
+            <ShareButton
+              href={downloadHref}
+              caption={caption}
+              platform={post.platform}
+              isVideo={!!post.video}
+              style={secondaryBtn}
+            />
+          )}
           {caption && (
             <button onClick={copy} style={secondaryBtn}>
               {copied ? "Copied ✓" : "Copy caption"}
