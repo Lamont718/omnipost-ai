@@ -26,6 +26,8 @@ interface Readiness {
   instagram: boolean;
   facebook: boolean;
   x: boolean;
+  /** The real @handle, or null when nobody has recorded one. */
+  handle: string | null;
 }
 
 interface AccountCheck {
@@ -57,6 +59,8 @@ interface Row {
   /** Written, still ahead, and a Reel — the publisher refuses these on purpose. */
   reels: number;
   connected: boolean;
+  /** The brand's @handle, or null when no account has ever been named. */
+  handle: string | null;
   /** What the platform says about the live token, once it has been asked. */
   check?: AccountCheck;
 }
@@ -162,6 +166,7 @@ export default function ConnectPage() {
         sendable: 0,
         reels: 0,
         connected: p.platform === "instagram" ? !!ready?.instagram : !!ready?.x,
+        handle: ready?.handle ?? null,
         check:
           p.platform === "instagram"
             ? checks?.find((c) => c.slug === p.brand.slug)
@@ -179,7 +184,15 @@ export default function ConnectPage() {
     const sendable = rows.reduce((n, r) => n + (r.connected ? 0 : r.sendable), 0);
     const reels = rows.reduce((n, r) => n + r.reels, 0);
     const connected = rows.filter((r) => r.connected).length;
-    return { sendable, reels, connected, rows: rows.length };
+    const unnamed = rows.filter((r) => !r.handle);
+    return {
+      sendable,
+      reels,
+      connected,
+      rows: rows.length,
+      unnamedPosts: unnamed.reduce((n, r) => n + r.sendable + r.reels, 0),
+      unnamedBrands: Array.from(new Set(unnamed.map((r) => r.name))),
+    };
   }, [rows]);
 
   const loading = !readiness || !slots;
@@ -223,6 +236,37 @@ export default function ConnectPage() {
             </p>
           </div>
 
+          {/*
+            Asked before the credentials, because it turned out to be the
+            question underneath them. The Conductor wrote a post every
+            Wednesday for months and was switched off on 2026-08-27 for having
+            no account and no plan to get one — and nothing on this page could
+            have told you, because every row here only ever asked whether the
+            keys were set. A brand nobody has ever named a handle for is the
+            visible shape of that.
+          */}
+          {totals.unnamedBrands.length > 0 && (
+            <div style={{ ...CARD, marginTop: 14, borderLeft: "3px solid #b91c1c" }}>
+              <p style={{ font: "700 15px/1.5 var(--font-geist-sans)", color: "#7f1d1d", margin: 0 }}>
+                First: does the account exist?
+              </p>
+              <p
+                style={{
+                  font: "400 14px/1.7 var(--font-geist-sans)",
+                  color: "#475569",
+                  margin: "8px 0 0",
+                }}
+              >
+                No handle has ever been recorded for {totals.unnamedBrands.join(" or ")} —{" "}
+                <strong>{totals.unnamedPosts} written posts</strong> are queued behind{" "}
+                {totals.unnamedBrands.length === 1 ? "it" : "them"}. If an account is never going to
+                exist, say so and the brand comes off the schedule instead of writing into nothing.
+                If it does exist, adding the handle in <code>brands.ts</code> is what stops this
+                page asking.
+              </p>
+            </div>
+          )}
+
           <h2 style={{ font: "700 19px/1.3 var(--font-geist-sans)", color: "#0f172a", margin: "34px 0 12px" }}>
             What&rsquo;s waiting on what
           </h2>
@@ -251,6 +295,23 @@ export default function ConnectPage() {
                   >
                     {r.connected ? "connected" : "not connected"}
                   </span>
+                  {r.handle ? (
+                    <span style={{ font: "400 12.5px/1 var(--font-geist-sans)", color: "#64748b" }}>
+                      {r.handle}
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        font: "700 12px/1 var(--font-geist-sans)",
+                        color: "#b91c1c",
+                        background: "#fef2f2",
+                        borderRadius: 999,
+                        padding: "5px 9px",
+                      }}
+                    >
+                      no account recorded
+                    </span>
+                  )}
                   <span
                     style={{
                       marginLeft: "auto",

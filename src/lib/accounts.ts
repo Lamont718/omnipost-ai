@@ -158,6 +158,18 @@ export interface BrandReadiness {
   instagram: boolean;
   facebook: boolean;
   x: boolean;
+  /**
+   * The brand's real @handle, or null when nobody has recorded one.
+   *
+   * Carried here because "is there a credential" turned out to be the second
+   * question, not the first. The Conductor spent months writing a post every
+   * Wednesday before anyone said out loud that it was never going to have an
+   * account — and nothing in this app could have told you, because every
+   * surface asked only whether the keys were set. A brand with no handle on
+   * file is the shape of that, and it is worth showing before asking anyone to
+   * go and generate tokens for it.
+   */
+  handle: string | null;
 }
 
 export function readiness(): BrandReadiness[] {
@@ -167,5 +179,6 @@ export function readiness(): BrandReadiness[] {
     instagram: !!instagramAccount(b.slug),
     facebook: !!facebookAccount(b.slug),
     x: !!xAccount(b.slug),
+    handle: b.handle ?? null,
   }));
 }
