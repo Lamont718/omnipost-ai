@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { hourInZone, planForDay, renderDailyHtml, sendDaily, todayInZone } from "@/lib/daily";
+import { recordSend } from "@/lib/sent-log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,14 +84,41 @@ export async function GET(request: Request) {
     // trains you to ignore exactly the alert that should mean something.
     const to = process.env.DIGEST_TO;
     if (!to || !process.env.RESEND_API_KEY) {
+      const reason = !to ? "DIGEST_TO is not set" : "RESEND_API_KEY is not set";
+      // Recorded, not just returned. "The email never arrived because nobody
+      // ever set the address" is the single most useful thing this log can say,
+      // and it is invisible unless a morning that sent nothing leaves a mark.
+      await recordSend({
+        kind: "daily",
+        date,
+        at: new Date().toISOString(),
+        sent: false,
+        reason,
+        due: plan.due.length,
+        to: to ?? "(unset)",
+      });
       return NextResponse.json({
         skipped: true,
-        reason: !to ? "DIGEST_TO is not set" : "RESEND_API_KEY is not set",
+        reason,
         wouldHaveSent: { date, due: plan.due.length, alreadyDone: plan.doneCount },
       });
     }
 
     const result = await sendDaily(to, plan, origin);
+
+    // After the send, never before: a record written first would describe an
+    // email that might not exist. The hour-gate skip above is deliberately not
+    // logged — that one is the twice-daily no-op working as designed, and
+    // logging it would bury the mornings that matter.
+    await recordSend({
+      kind: "daily",
+      date,
+      at: new Date().toISOString(),
+      sent: result.sent,
+      reason: result.sent ? undefined : result.reason,
+      due: plan.due.length,
+      to,
+    });
 
     return NextResponse.json(
       {

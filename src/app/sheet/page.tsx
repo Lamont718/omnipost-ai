@@ -29,6 +29,17 @@ import type { Verdict } from "@/lib/feedback";
  * or saved as a PDF and worked through on paper.
  */
 
+interface SentState {
+  storing: boolean;
+  last: {
+    date: string;
+    at: string;
+    sent: boolean;
+    reason?: string;
+    to: string;
+  } | null;
+}
+
 interface SlotPost {
   id: string;
   date: string;
@@ -94,6 +105,15 @@ export default function SheetPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<Record<string, BrandReadiness>>({});
   const [live, setLive] = useState<Record<string, PublishedRecord>>({});
+  /**
+   * Everything written that never went out, across every month at once — see
+   * lib/backlog.ts. Kept beside the month's posts rather than replacing them,
+   * because the two answer different questions: what's next, and what was lost.
+   */
+  const [missed, setMissed] = useState<SlotPost[] | null>(null);
+  const [showMissed, setShowMissed] = useState(false);
+  /** Whether the 8am email is actually going out — see lib/sent-log.ts. */
+  const [sent, setSent] = useState<SentState | null>(null);
   const [publishing, setPublishing] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<Record<string, string>>({});
 
@@ -126,6 +146,26 @@ export default function SheetPage() {
   }, []);
 
   useEffect(() => {
+    fetch("/api/sent")
+      .then((r) => r.json())
+      .then((d) => setSent({ storing: !!d.storing, last: (d.sends ?? [])[0] ?? null }))
+      .catch(() => {
+        /* The line simply doesn't appear. */
+      });
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/backlog")
+      .then((r) => r.json())
+      .then((d) => setMissed(d.posts ?? []))
+      .catch(() => {
+        // The sheet's job is the month in front of him. If the backlog scan
+        // fails the chip simply never appears, rather than an error bar sitting
+        // above work he can still do.
+      });
+  }, []);
+
+  useEffect(() => {
     setLoading(true);
     fetch(`/api/schedule?month=${month}`)
       .then((r) => r.json())
@@ -144,7 +184,25 @@ export default function SheetPage() {
    * post, so listing it would only pad the work-list with things you can't do —
    * the count of them is reported instead.
    */
+  /**
+   * How much of the pile is left right now. Ticking one in this view drops it
+   * out immediately, so the number on the chip goes down as he works — which is
+   * the entire reason to show a number rather than a word.
+   */
+  const missedLeft = useMemo(
+    () => (missed ?? []).filter((p) => !posted[p.id] && !live[p.id]).length,
+    [missed, posted, live],
+  );
+
   const { rows, unwritten, pastHidden } = useMemo(() => {
+    if (showMissed) {
+      const mineMissed = (missed ?? [])
+        .filter((p) => brandSlug === "all" || p.brand.slug === brandSlug)
+        // Always drop what's been done, whatever the "show what's left" toggle
+        // says: a backlog you can't watch shrink is a list, not a queue.
+        .filter((p) => !posted[p.id] && !live[p.id]);
+      return { rows: mineMissed, unwritten: 0, pastHidden: 0 };
+    }
     const mine = posts.filter((p) => brandSlug === "all" || p.brand.slug === brandSlug);
     const written = mine.filter((p) => p.caption);
     // A month view spills into the neighbouring months, so opening this in
@@ -160,7 +218,7 @@ export default function SheetPage() {
       unwritten: mine.filter((p) => !p.caption && (showPast || p.date >= today)).length,
       pastHidden: written.length - written.filter((p) => p.date >= today).length,
     };
-  }, [posts, brandSlug, hidePosted, posted, live, showPast, today]);
+  }, [posts, brandSlug, hidePosted, posted, live, showPast, today, showMissed, missed]);
 
   const doneCount = rows.filter((p) => posted[p.id] || live[p.id]).length;
 
@@ -268,15 +326,48 @@ export default function SheetPage() {
           file but never the words, so both happen in the one tap.
         </p>
 
+        {/*
+          The one thing the app could never answer about itself. Three states,
+          because they mean three different things: nothing recorded yet, an
+          attempt that failed and why, and an accepted send. "Accepted" is the
+          honest word — Resend taking the message is not proof anyone read it,
+          and a green tick claiming delivery would be the app's own version of
+          the caption that says it posted to Instagram when it didn't.
+        */}
+        {sent && (
+          <p
+            className="no-print"
+            style={{
+              margin: "8px 0 0",
+              fontSize: 12,
+              lineHeight: 1.5,
+              color: sent.last && !sent.last.sent ? "#b91c1c" : "#94a3b8",
+            }}
+          >
+            {!sent.storing
+              ? "8am email · not being recorded — there's no blob store, so nothing here can say whether it goes out."
+              : !sent.last
+                ? "8am email · nothing recorded yet. The log starts now, so tomorrow morning will leave a mark either way."
+                : sent.last.sent
+                  ? `8am email · accepted for ${format(parseISO(sent.last.date), "MMM d")} at ${format(
+                      new Date(sent.last.at),
+                      "h:mma",
+                    ).toLowerCase()}, to ${sent.last.to} — accepted by the provider, which isn't proof it was read.`
+                  : `8am email · the last attempt (${format(parseISO(sent.last.date), "MMM d")}) did not send — ${sent.last.reason ?? "no reason given"}.`}
+          </p>
+        )}
+
         {/* Controls */}
         <div
           className="no-print"
           style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "20px 0 6px" }}
         >
+          {/* The backlog spans every month at once, so a month picker above it
+              would be a control that changes nothing. */}
           <select
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            style={selectStyle}
+            style={{ ...selectStyle, display: showMissed ? "none" : undefined }}
             aria-label="Month"
           >
             {monthChoices().map((m) => (
@@ -300,14 +391,36 @@ export default function SheetPage() {
             ))}
           </select>
 
-          <button
-            onClick={() => setHidePosted((v) => !v)}
-            style={{ ...selectStyle, cursor: "pointer", fontWeight: 600 }}
-          >
-            {hidePosted ? "Showing what's left" : "Show what's left"}
-          </button>
+          {!showMissed && (
+            <button
+              onClick={() => setHidePosted((v) => !v)}
+              style={{ ...selectStyle, cursor: "pointer", fontWeight: 600 }}
+            >
+              {hidePosted ? "Showing what's left" : "Show what's left"}
+            </button>
+          )}
 
-          {pastHidden > 0 && (
+          {/*
+            The pile of finished work nobody ever sent. Only appears when there
+            is one — an empty backlog should leave no trace on the page.
+          */}
+          {missedLeft > 0 && (
+            <button
+              onClick={() => setShowMissed((v) => !v)}
+              style={{
+                ...selectStyle,
+                cursor: "pointer",
+                fontWeight: 700,
+                borderColor: showMissed ? "#fca5a5" : "#fecaca",
+                background: showMissed ? "#b91c1c" : "#fef2f2",
+                color: showMissed ? "#fff" : "#b91c1c",
+              }}
+            >
+              {showMissed ? "Back to the schedule" : `${missedLeft} never went out`}
+            </button>
+          )}
+
+          {!showMissed && pastHidden > 0 && (
             <button
               onClick={() => setShowPast((v) => !v)}
               style={{ ...selectStyle, cursor: "pointer", fontWeight: 600 }}
@@ -432,6 +545,33 @@ export default function SheetPage() {
           </div>
         )}
 
+        {/*
+          Said plainly and once. The number is the point: this is finished work,
+          already paid for, that reached nobody — and every row below it can
+          still go out today with the same Share button as anything else. No
+          scolding, no "streak broken", because the app has no idea why a day
+          was missed and pretending otherwise is how a tool stops being opened.
+        */}
+        {showMissed && (
+          <div
+            style={{
+              border: "1px solid #fecaca",
+              background: "#fef2f2",
+              borderRadius: 10,
+              padding: "12px 14px",
+              margin: "0 0 20px",
+              fontSize: 12.5,
+              lineHeight: 1.6,
+              color: "#7f1d1d",
+            }}
+          >
+            <strong>{missedLeft} written posts never went out.</strong> Newest first. Almost none of
+            these expired — a villain page or a debate card was scheduled for a Tuesday for cadence,
+            not because it was news, so it is still good today. Skip anything that has genuinely
+            gone stale; Share or tick off the rest and this list shrinks as you go.
+          </div>
+        )}
+
         {!loading && rows.length === 0 && (
           <div
             style={{
@@ -443,7 +583,9 @@ export default function SheetPage() {
               fontSize: 14,
             }}
           >
-            {hidePosted
+            {showMissed
+              ? "Nothing was missed. Everything written has gone out. 🎉"
+              : hidePosted
               ? "Everything here is posted. 🎉"
               : pastHidden > 0
                 ? "Nothing left to post this month — the rest is already behind you."
