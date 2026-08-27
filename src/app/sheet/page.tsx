@@ -50,6 +50,8 @@ interface SlotPost {
   caption: string | null;
   /** Always a still — the poster frame when this post is a Reel. */
   image?: string | null;
+  /** Where that still came from: "library", "page", or "generated". */
+  imageSource?: string | null;
   /** The clip itself, when this post is a Reel. */
   video?: string | null;
   videoDescribes?: string | null;
@@ -235,6 +237,31 @@ export default function SheetPage() {
 
   const doneCount = rows.filter((p) => posted[p.id] || live[p.id]).length;
 
+  /**
+   * Brands whose every post is a generated text card.
+   *
+   * WWSH was one of these for months and nothing said so — fourteen posts
+   * carrying the caption's first line printed on a coloured rectangle, which
+   * looks deliberate on the calendar and looks like a brand with no photographs
+   * in the feed. The app knew the source of every picture it chose and never
+   * mentioned that one whole brand had fallen to the floor of that list.
+   *
+   * Only "all of them", never "some": a brand with a mix is working as designed
+   * — the card is the fallback for a topic whose page has no picture — and
+   * flagging that would be noise on top of a working system.
+   */
+  const cardOnlyBrands = useMemo(() => {
+    const byBrand = new Map<string, { name: string; total: number; cards: number }>();
+    for (const p of posts) {
+      if (!p.caption || p.video) continue;
+      const seen = byBrand.get(p.brand.slug) ?? { name: p.brand.name, total: 0, cards: 0 };
+      seen.total += 1;
+      if (p.imageSource === "generated") seen.cards += 1;
+      byBrand.set(p.brand.slug, seen);
+    }
+    return Array.from(byBrand.values()).filter((b) => b.total > 0 && b.cards === b.total);
+  }, [posts]);
+
   const connectedCount = useMemo(
     () => Object.values(readiness).filter((b) => b.instagram || b.facebook || b.x).length,
     [readiness],
@@ -367,6 +394,21 @@ export default function SheetPage() {
                       "h:mma",
                     ).toLowerCase()}, to ${sent.last.to} — accepted by the provider, which isn't proof it was read.`
                   : `8am email · the last attempt (${format(parseISO(sent.last.date), "MMM d")}) did not send — ${sent.last.reason ?? "no reason given"}.`}
+          </p>
+        )}
+
+        {!showMissed && cardOnlyBrands.length > 0 && (
+          <p
+            className="no-print"
+            style={{ margin: "6px 0 0", fontSize: 12, lineHeight: 1.5, color: "#94a3b8" }}
+          >
+            Pictures ·{" "}
+            {cardOnlyBrands
+              .map((b) => `${b.name} (${b.total} post${b.total === 1 ? "" : "s"})`)
+              .join(", ")}{" "}
+            {cardOnlyBrands.length === 1 ? "is posting" : "are posting"} text cards this month, not
+            photographs — no pictures in the library and none on the topic pages. Anything dropped
+            into the library gets used automatically.
           </p>
         )}
 
