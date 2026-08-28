@@ -296,11 +296,18 @@ export const BRANDS: Brand[] = [
         "unlock their potential",
         "screen time solution",
       ],
+      // Ordered brand → what it is → who it is for. The previous set was four
+      // tags of which two led with race, so every post announced its audience
+      // twice before it said what the book was. #BlackKidsRead stays last and
+      // stays deliberately: a parent searching it wants exactly this, and that
+      // is a warmer lead than the ocean of #picturebooks. Rebalanced, not erased.
       hashtags: [
         "#EmekaExplores",
-        "#BlackHistoryForKids",
-        "#BlackKidsRead",
+        "#PictureBooks",
+        "#ReadAloud",
+        "#KidLit",
         "#RaisingReaders",
+        "#BlackKidsRead",
       ],
       // ⚠️ The My Crown facts below were read off emeka-books.com on 2026-08-22 —
       // the price, the run size and the September 24 ship date all come from its
