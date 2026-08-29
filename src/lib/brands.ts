@@ -1126,6 +1126,36 @@ export function activeBrands(): Brand[] {
   return BRANDS.filter((b) => b.active);
 }
 
+/**
+ * A page description with the brand's site-wide furniture taken out.
+ *
+ * Lives here, next to `sitewidePageCopy`, because it has to run in two places.
+ * Stripping it in lib/sources.ts alone would only clean topics discovered from
+ * now on — and a caption record stores the topic it was written from, so every
+ * slot already on the calendar would hand the boilerplate straight back to the
+ * writer on the next reroll. lib/compose.ts runs it again on the way into the
+ * facts block, which is the point where it actually matters.
+ *
+ * Returns undefined rather than an empty string when nothing survives: an empty
+ * context and a missing one mean the same thing to the prompt builder, and only
+ * one of them is handled there.
+ */
+export function withoutSitewideCopy(
+  description: string | undefined,
+  brand: Brand,
+): string | undefined {
+  if (!description || !brand.sitewidePageCopy) return description;
+  const stripped = description
+    .replace(brand.sitewidePageCopy, " ")
+    // "<Category> · <boilerplate>" leaves a dangling separator behind, and a
+    // facts block that opens with a bullet reads like something went missing.
+    .replace(/[·—–-]\s*$/, "")
+    .replace(/^\s*[·—–-]/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return stripped || undefined;
+}
+
 export function brandBySlug(slug: string): Brand | undefined {
   return BRANDS.find((b) => b.slug === slug);
 }

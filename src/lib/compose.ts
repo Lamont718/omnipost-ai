@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { Brand } from "./brands";
+import { Brand, withoutSitewideCopy } from "./brands";
 import { Platform, VoiceProfile, GenerateResponse } from "./types";
 import { Budget, BudgetExceededError } from "./spend";
 
@@ -255,9 +255,14 @@ export async function composePost(opts: {
   const system = buildSystemPrompt(brand.name, brand.voice, platform, media);
 
   const parts = [`Write a ${platform} post about: ${topic.title}`];
-  if (topic.context) {
+  // Stripped here as well as in lib/sources.ts, because a caption record keeps
+  // the topic it was written from: every slot written before the brand grew a
+  // `sitewidePageCopy` still has the boilerplate stored on it, and a reroll
+  // would feed it back in as though it were a fact about this card.
+  const facts = withoutSitewideCopy(topic.context, brand);
+  if (facts) {
     parts.push(
-      `VERIFIED FACTS (the only specifics you may use):\n"""\n${topic.context}\n"""`,
+      `VERIFIED FACTS (the only specifics you may use):\n"""\n${facts}\n"""`,
     );
   } else {
     parts.push(
@@ -327,7 +332,7 @@ ${media.describes}
   // model to infer from the background paragraph. Matched against the title and
   // the verified facts together, because the distinguishing detail is usually in
   // the facts (a YODM card's category lives in its page description).
-  const haystack = `${topic.title}\n${topic.context ?? ""}`;
+  const haystack = `${topic.title}\n${facts ?? ""}`;
   const constraints = (brand.voice.topic_constraints ?? []).filter(
     (c) => (!c.when || c.when.test(haystack)) && (!c.unless || !c.unless.test(haystack)),
   );
