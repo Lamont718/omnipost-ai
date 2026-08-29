@@ -76,8 +76,37 @@ function to12h(time: string): string {
   return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
+/**
+ * The month named in the URL, if it names one.
+ *
+ * Anchored at midday on the 1st rather than midnight: a date-only string parsed
+ * as UTC midnight is the previous day in New York, which would land the whole
+ * grid on the wrong month for anyone west of Greenwich.
+ */
+function monthFromUrl(): Date | null {
+  if (typeof window === "undefined") return null;
+  const m = new URLSearchParams(window.location.search)
+    .get("month")
+    ?.match(/^(\d{4})-(\d{2})$/);
+  if (!m) return null;
+  const month = Number(m[2]);
+  if (month < 1 || month > 12) return null;
+  return new Date(Number(m[1]), month - 1, 1, 12);
+}
+
 export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  /*
+   * ?month=YYYY-MM was accepted by /api/schedule and ignored by this page,
+   * which always opened on today. So every link to a particular month — in an
+   * email, in a message, in a note to himself — silently landed on the current
+   * one, and the posts it was pointing at were never seen.
+   *
+   * Read on mount rather than in the initial state so the server and the first
+   * client render agree; the fetch waits for it so a linked month costs one
+   * request, not two.
+   */
+  const [monthReady, setMonthReady] = useState(false);
   const [posts, setPosts] = useState<SlotPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<SlotPost | null>(null);
@@ -88,6 +117,9 @@ export default function CalendarPage() {
 
   useEffect(() => {
     setLocalCaptions(loadLS(LS_CAPTIONS));
+    const linked = monthFromUrl();
+    if (linked) setCurrentMonth(linked);
+    setMonthReady(true);
   }, []);
 
   const load = useCallback(async () => {
@@ -102,8 +134,21 @@ export default function CalendarPage() {
   }, [currentMonth]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (monthReady) load();
+  }, [load, monthReady]);
+
+  /*
+   * Keep the URL on the month being looked at, so the address bar is always a
+   * link to what is on screen — reloading, bookmarking and sharing all land
+   * back here rather than on today. replaceState, not push: paging through
+   * months should not fill the back button.
+   */
+  useEffect(() => {
+    if (!monthReady) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("month", format(currentMonth, "yyyy-MM"));
+    window.history.replaceState(null, "", url);
+  }, [currentMonth, monthReady]);
 
   /*
    * ?post=<slot id> opens that post straight away, so a single post can be
@@ -166,7 +211,10 @@ export default function CalendarPage() {
               Content Calendar
             </h1>
             <p style={{ color: "#6b7280", fontSize: 13, margin: "4px 0 0" }}>
-              {posts.length} posts scheduled · {filledCount} written
+              {posts.length} scheduled · {filledCount} written
+              {posts.length - filledCount > 0
+                ? ` · ${posts.length - filledCount} not written yet`
+                : ""}
               {loading ? " · loading…" : ""}
             </p>
           </div>
@@ -285,6 +333,13 @@ export default function CalendarPage() {
                         border: "none",
                         borderLeft: `3px solid ${p.brand.colorHex}`,
                         background: isPosted ? "#f0fdf4" : written ? "#f8fafc" : "#fff",
+                        // A slot with no caption used to be marked by a single
+                        // "·" after the brand name, against a background one
+                        // shade off the written one. Nobody can read that: he
+                        // looked at a full grid and could not tell which posts
+                        // existed. Dashed and labelled instead.
+                        outline: written || isPosted ? "none" : "1px dashed #d1d5db",
+                        outlineOffset: -1,
                         borderRadius: 5,
                         padding: "4px 7px",
                         marginBottom: 4,
@@ -310,8 +365,21 @@ export default function CalendarPage() {
                           textOverflow: "ellipsis",
                         }}
                       >
-                        {p.brand.name} {isPosted ? "✓" : written ? "" : "·"}
+                        {p.brand.name} {isPosted ? "✓" : ""}
                       </div>
+                      {!written && (
+                        <div
+                          style={{
+                            color: "#9ca3af",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: 0.3,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          not written
+                        </div>
+                      )}
                     </button>
                   );
                 })}
