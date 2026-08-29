@@ -151,6 +151,21 @@ export interface Brand {
    * facts block makes the caption go and find an angle; a boilerplate one lets
    * it fill the space without one.
    */
+  /**
+   * A better picture than the page's share image, built from the topic's own
+   * URL.
+   *
+   * A share image is sized for a link preview: 1200x630. Posted to an Instagram
+   * feed that is a thin letterboxed strip with most of the screen empty above
+   * and below it — on the one format where the picture IS the post. yodm.com
+   * now renders the same card at 1080x1350 with a photograph of the actual game
+   * in it, so this points at that instead.
+   *
+   * `match` runs against the topic URL and `template` may reference its capture
+   * groups as $1, $2. Data rather than a function so the whole brand table stays
+   * readable and nothing here can do anything but build a string.
+   */
+  postImage?: { match: RegExp; template: string };
   sitewidePageCopy?: RegExp;
   /**
    * What this brand's artwork already says IN WORDS, when the picture carries
@@ -214,6 +229,13 @@ export const BRANDS: Brand[] = [
     // The one sentence every card page shares. See `sitewidePageCopy` above:
     // leaving it in the facts block is what made 39 captions out of 39 recite
     // the rules of the game instead of arguing the question on the card.
+    // The portrait card with a real photograph of the game in it, rather than
+    // the 1200x630 link-preview card. Both come off the same deck and the same
+    // design in the YODM repo; only the shape and the picture differ.
+    postImage: {
+      match: /\/card\/(\d+)$/,
+      template: "https://yodm.com/api/card-image?id=$1&format=post",
+    },
     sitewidePageCopy:
       /\s*Pick a side and make your case in 30 seconds\.\s*One of 92 cards from YODM,? the ultimate debating game\.?/i,
     // The post IS the card: yodm.com renders the question across a 1200x630
@@ -1154,6 +1176,19 @@ export function withoutSitewideCopy(
     .replace(/\s+/g, " ")
     .trim();
   return stripped || undefined;
+}
+
+/**
+ * The brand's own post-sized image for a topic, if it has one and the URL fits.
+ *
+ * Returns undefined for every brand without a `postImage` rule and for any URL
+ * that does not match it, so the ordinary share-image path is untouched.
+ */
+export function postImageUrlFor(brand: Brand, url?: string): string | undefined {
+  if (!brand.postImage || !url) return undefined;
+  const m = url.match(brand.postImage.match);
+  if (!m) return undefined;
+  return brand.postImage.template.replace(/\$(\d)/g, (_, i) => m[Number(i)] ?? "");
 }
 
 export function brandBySlug(slug: string): Brand | undefined {

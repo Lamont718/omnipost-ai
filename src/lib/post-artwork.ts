@@ -1,4 +1,4 @@
-import { Brand } from "./brands";
+import { Brand, postImageUrlFor } from "./brands";
 import { Topic } from "./sources";
 import { LibraryImage, pickForSlot } from "./library";
 import {
@@ -120,6 +120,19 @@ function resolveStill({
   // Only when the site actually varies it per page — see the flag's own note.
   const pageImage =
     !brand.sitewideShareImage && topic.url ? shareImages.get(topic.url) : null;
+
+  /**
+   * A picture the brand's own site can build for this exact topic at post size.
+   *
+   * Ranked above everything, including the library, because it is not a derived
+   * or borrowed graphic: it is this card, in this brand's design, in the shape
+   * the platform actually shows. There is no case where a generic library
+   * photograph beats the card the post is about.
+   */
+  const postImage = postImageUrlFor(brand, topic.url);
+  if (postImage) {
+    return { url: postImage, source: "page", alt: topic.title };
+  }
 
   /**
    * Normally the brand library wins: artwork Lamont chose beats anything
