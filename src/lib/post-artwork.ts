@@ -116,6 +116,7 @@ function resolveStill({
   origin,
   library,
   shareImages,
+  platform,
 }: ResolveInput): Omit<Artwork, "kind"> {
   // Only when the site actually varies it per page — see the flag's own note.
   const pageImage =
@@ -129,7 +130,7 @@ function resolveStill({
    * the platform actually shows. There is no case where a generic library
    * photograph beats the card the post is about.
    */
-  const postImage = postImageUrlFor(brand, topic.url);
+  const postImage = postImageUrlFor(brand, topic.url, platform);
   if (postImage) {
     return { url: postImage, source: "page", alt: topic.title };
   }

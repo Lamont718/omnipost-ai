@@ -1,4 +1,4 @@
-import { PostSlot, VoiceProfile } from "./types";
+import { Platform, PostSlot, VoiceProfile } from "./types";
 import type { VideoClipMeta } from "./video-library";
 
 /**
@@ -165,7 +165,17 @@ export interface Brand {
    * groups as $1, $2. Data rather than a function so the whole brand table stays
    * readable and nothing here can do anything but build a string.
    */
-  postImage?: { match: RegExp; template: string };
+  postImage?: {
+    match: RegExp;
+    /** Instagram and Facebook, which show a tall picture whole. */
+    template: string;
+    /**
+     * X, which crops a tall picture to roughly 16:9 in the timeline — so a
+     * portrait post arrives there with its question cut off, the opposite of
+     * the problem the post size was added to fix. Falls back to `template`.
+     */
+    wideTemplate?: string;
+  };
   sitewidePageCopy?: RegExp;
   /**
    * What this brand's artwork already says IN WORDS, when the picture carries
@@ -235,6 +245,7 @@ export const BRANDS: Brand[] = [
     postImage: {
       match: /\/card\/(\d+)$/,
       template: "https://yodm.com/api/card-image?id=$1&format=post",
+      wideTemplate: "https://yodm.com/api/card-image?id=$1&format=post-wide",
     },
     sitewidePageCopy:
       /\s*Pick a side and make your case in 30 seconds\.\s*One of 92 cards from YODM,? the ultimate debating game\.?/i,
@@ -1184,11 +1195,18 @@ export function withoutSitewideCopy(
  * Returns undefined for every brand without a `postImage` rule and for any URL
  * that does not match it, so the ordinary share-image path is untouched.
  */
-export function postImageUrlFor(brand: Brand, url?: string): string | undefined {
+export function postImageUrlFor(
+  brand: Brand,
+  url?: string,
+  platform?: Platform,
+): string | undefined {
   if (!brand.postImage || !url) return undefined;
   const m = url.match(brand.postImage.match);
   if (!m) return undefined;
-  return brand.postImage.template.replace(/\$(\d)/g, (_, i) => m[Number(i)] ?? "");
+  const template =
+    (platform === "x" ? brand.postImage.wideTemplate : undefined) ??
+    brand.postImage.template;
+  return template.replace(/\$(\d)/g, (_, i) => m[Number(i)] ?? "");
 }
 
 export function brandBySlug(slug: string): Brand | undefined {
