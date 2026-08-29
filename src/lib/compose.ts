@@ -200,19 +200,102 @@ Respond with ONLY a JSON object in this exact format:
 }`;
 }
 
-/** Pull the JSON object out of the reply, tolerating stray prose around it. */
-function parseReply(text: string, voice: VoiceProfile): GenerateResponse {
-  try {
-    const match = text.match(/\{[\s\S]*\}/);
-    return JSON.parse(match ? match[0] : text) as GenerateResponse;
-  } catch {
-    return {
-      caption: text,
-      suggested_hashtags: voice.hashtags,
-      recommended_post_time: "10:00 AM EST",
-      platform_notes: "AI-generated content",
-    };
+/**
+ * Escape the raw control characters a model leaves inside JSON string literals.
+ *
+ * A caption has paragraph breaks in it, and the model sometimes writes them as
+ * actual newlines between the quotes instead of `\n`. That is invalid JSON, so
+ * JSON.parse throws — and the old fallback then stored the ENTIRE reply, braces
+ * and `suggested_hashtags` and all, as the caption. Two posts went onto the
+ * calendar that way (2 of 265): a MostHatedNBA post and a YODM one, both of
+ * them a wall of JSON that nobody could have published.
+ *
+ * Tracks whether it is inside a string rather than replacing globally, so the
+ * newlines that legitimately separate the object's own lines are left alone.
+ */
+function escapeControlCharsInStrings(json: string): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+  for (const ch of json) {
+    if (escaped) {
+      out += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      out += ch;
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      out += ch;
+      continue;
+    }
+    if (inString && ch === "\n") out += "\\n";
+    else if (inString && ch === "\r") out += "\\r";
+    else if (inString && ch === "\t") out += "\\t";
+    else out += ch;
   }
+  return out;
+}
+
+/** True for text that is the model's reply object rather than a caption. */
+function looksLikeRawJson(text: string): boolean {
+  return /^\s*\{/.test(text) && /"caption"\s*:/.test(text);
+}
+
+/**
+ * Pull the JSON object out of the reply, tolerating stray prose around it.
+ *
+ * Three attempts, each one weaker than the last, and the raw text only ever as a
+ * final resort — because storing the raw text is how a JSON object ends up on
+ * the calendar wearing a caption's clothes.
+ */
+function parseReply(text: string, voice: VoiceProfile): GenerateResponse {
+  const fallback = (caption: string): GenerateResponse => ({
+    caption,
+    suggested_hashtags: voice.hashtags,
+    recommended_post_time: "10:00 AM EST",
+    platform_notes: "AI-generated content",
+  });
+
+  const candidate = text.match(/\{[\s\S]*\}/)?.[0] ?? text;
+
+  for (const attempt of [candidate, escapeControlCharsInStrings(candidate)]) {
+    try {
+      const parsed = JSON.parse(attempt) as GenerateResponse;
+      if (typeof parsed?.caption === "string" && parsed.caption.trim()) return parsed;
+    } catch {
+      // Try the next repair.
+    }
+  }
+
+  // Still not valid JSON. Lift the caption out by hand rather than keep the
+  // braces: everything after `"caption": "` up to the quote that closes it.
+  const lifted = candidate.match(/"caption"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  if (lifted) {
+    const unescaped = lifted[1]
+      .replace(/\\n/g, "\n")
+      .replace(/\\t/g, "\t")
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\");
+    if (unescaped.trim()) return fallback(unescaped);
+  }
+
+  // A reply with no JSON in it at all is a plain-prose caption, which is a
+  // perfectly good answer and not worth a warning. A reply that IS the object
+  // and could not be read even after repair is a real failure: return nothing
+  // rather than the braces, so the slot shows as not written instead of going
+  // onto the calendar looking like a post.
+  if (!looksLikeRawJson(text)) return fallback(text);
+
+  console.warn(
+    `[compose] could not read the reply object even after repair (${text.length} chars): ` +
+      text.slice(0, 120).replace(/\s+/g, " "),
+  );
+  return fallback("");
 }
 
 export async function composePost(opts: {
