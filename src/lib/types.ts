@@ -63,6 +63,33 @@ export interface VoiceProfile {
   emoji_style: EmojiStyle;
   /** Rules that switch on per topic — see TopicConstraint. */
   topic_constraints?: TopicConstraint[];
+  /**
+   * Phrases this brand may never write, checked after the caption comes back.
+   *
+   * `banned_words` covers single marketing words and is only ever ASKED for.
+   * This is for whole phrases, and it is MEASURED — because the failure it
+   * exists for was not the model ignoring an instruction, it was the model
+   * obeying one. YODM's card pages carry a single site-wide description ("Pick
+   * a side and make your case in 30 seconds. One of 92 cards…"), the grounding
+   * rule says the facts block is the only place specifics may come from, and so
+   * every caption recited it: 39 of 39 said "30 seconds", 36 said "92 cards",
+   * 33 said "pick a side". The deck itself was the only thing being posted and
+   * the caption underneath added nothing to it.
+   *
+   * Put here only phrases that are already printed on the artwork or already
+   * true of every post — the point is to force the caption to carry something
+   * the picture cannot.
+   */
+  banned_phrases?: string[];
+  /**
+   * Rules that apply to EVERY post for this brand, as opposed to
+   * `topic_constraints`, which switch on per topic.
+   *
+   * These sit with the hard constraints in the prompt rather than in
+   * `cultural_context`, for the reason given on TopicConstraint: prose gets
+   * weighed, an instruction gets obeyed.
+   */
+  house_rules?: string[];
 }
 
 export interface Organization {

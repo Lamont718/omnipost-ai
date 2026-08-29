@@ -142,6 +142,36 @@ export async function poolSizeFor(brand: Brand): Promise<number> {
   return urls.size;
 }
 
+/**
+ * A page description with the brand's site-wide furniture taken out.
+ *
+ * This runs on the way INTO the verified-facts block, which is the only place
+ * lib/compose.ts lets a caption take specifics from. A sentence that is
+ * identical on all 92 of a site's pages is not a specific about any of them,
+ * but the writer has no way to know that — it reads as verified detail, it is
+ * the only verified detail on offer, and so it goes into the post. Every time.
+ *
+ * Returns undefined rather than an empty string when nothing survives: an empty
+ * context and a missing one mean the same thing to the prompt builder, and only
+ * one of them is handled.
+ */
+function withoutSitewideCopy(
+  description: string | undefined,
+  brand: Brand,
+): string | undefined {
+  if (!description || !brand.sitewidePageCopy) return description;
+  const stripped = description
+    .replace(brand.sitewidePageCopy, " ")
+    // A description built as "<Category> · <boilerplate>" leaves a dangling
+    // separator behind, and a fact block that opens with a bullet reads like
+    // something went missing.
+    .replace(/[·—–-]\s*$/, "")
+    .replace(/^\s*[·—–-]/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return stripped || undefined;
+}
+
 /** Title and meta description, for context. Cheap enough at ~10 pages/week. */
 async function fetchPageMeta(
   url: string,
@@ -261,6 +291,8 @@ async function topicsFromPool(
   want: number,
   week: number,
   now: Date,
+  /** Only for `sitewidePageCopy` — which of this brand's page copy is furniture. */
+  brand: Brand,
 ): Promise<Topic[]> {
   if (want <= 0 || sources.length === 0) return [];
 
@@ -305,7 +337,7 @@ async function topicsFromPool(
         url: entry.url,
         source: "site" as const,
         title: meta.title ?? pathOf(entry.url).replace(/[-/]/g, " ").trim(),
-        context: meta.description,
+        context: withoutSitewideCopy(meta.description, brand),
         ...(entry.pageImageWins ? { pageImageWins: true } : {}),
       };
     }),
@@ -351,6 +383,7 @@ export async function topicsForBrand(
         slotIndexes.length,
         week,
         now,
+        brand,
       );
       slotIndexes.forEach((slotIndex: number, k: number) => {
         if (picked[k]) bySlot[slotIndex] = picked[k];

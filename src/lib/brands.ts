@@ -133,6 +133,39 @@ export interface Brand {
    */
   sitewideShareImage?: boolean;
   /**
+   * Copy that appears word for word in EVERY page description on this brand's
+   * site, stripped out before the description is handed over as a topic's
+   * verified facts.
+   *
+   * It is furniture, not a fact about the topic — but the grounding rule in
+   * lib/compose.ts says the facts block is the only place specifics may come
+   * from, so whatever is in it is what the caption gets written out of. yodm.com
+   * gives all 92 cards the same description: "<Category> · Pick a side and make
+   * your case in 30 seconds. One of 92 cards from YODM, the ultimate debating
+   * game." The only per-card word in it is the category. The writer was
+   * therefore handed the same three specifics 39 times and used all three every
+   * time, which is precisely what a recital looks like.
+   *
+   * Strip the shared sentence and the category survives, which is the part the
+   * topic constraints match on. What is left is thin — correctly so. A thin
+   * facts block makes the caption go and find an angle; a boilerplate one lets
+   * it fill the space without one.
+   */
+  sitewidePageCopy?: RegExp;
+  /**
+   * What this brand's artwork already says IN WORDS, when the picture carries
+   * legible copy of its own.
+   *
+   * Given to the writer as a prohibition, never as material. A YODM post is a
+   * rendered card with the question printed across it in large type, and 26 of
+   * the first 39 captions opened by typing that same question out again — so
+   * the reader met the sentence twice and the post said one thing.
+   *
+   * Leave unset for a photograph. This is only for artwork whose words a reader
+   * can read.
+   */
+  artworkSays?: string;
+  /**
    * The posting schedule: one entry per weekly post — weekday, time, platform.
    * This is the whole "when do I post" model. The number of entries is how many
    * posts a week; edit these to change your cadence.
@@ -178,6 +211,16 @@ export const BRANDS: Brand[] = [
     // and there isn't going to be one — Lamont's Facebook is personal. The slot
     // moved to Instagram rather than being deleted because the card graphic is
     // the strongest thing this brand has and Instagram is where it lands.
+    // The one sentence every card page shares. See `sitewidePageCopy` above:
+    // leaving it in the facts block is what made 39 captions out of 39 recite
+    // the rules of the game instead of arguing the question on the card.
+    sitewidePageCopy:
+      /\s*Pick a side and make your case in 30 seconds\.\s*One of 92 cards from YODM,? the ultimate debating game\.?/i,
+    // The post IS the card: yodm.com renders the question across a 1200x630
+    // graphic with the category strip and the logo on it.
+    artworkSays:
+      "the card's question in large type, its category, and the YODM logo — a reader " +
+      "has already read the question before reaching the first word of the caption",
     schedule: [
       { day: 2, time: "18:00", platform: "instagram" },
       { day: 4, time: "19:00", platform: "instagram" },
@@ -206,6 +249,50 @@ export const BRANDS: Brand[] = [
             "Do not mention a die, rolling, chance, or being assigned or given a side. " +
             "On this card the player picks their own side and argues it.",
         },
+      ],
+      // Every one of these is either printed on the card in the picture or true
+      // of all 92 of them, so none of it is news to anyone reading the post. The
+      // first 39 captions were built almost entirely out of this list — 39/39
+      // "30 seconds", 36/39 "92 cards", 33/39 "pick a side" — because the card
+      // page's description is the only thing the grounding rule let them use.
+      // Checked after writing, not just asked for; see composePost.
+      banned_phrases: [
+        "30 seconds",
+        "thirty seconds",
+        "30-second",
+        "92 cards",
+        "one of 92",
+        "pick a side",
+        "pick your side",
+        "make your case",
+        "the ultimate debating game",
+        "ends friendships",
+        "end a friendship",
+        "ending friendships",
+      ],
+      house_rules: [
+        "The card graphic carries the question. Do NOT open by quoting or " +
+          "rephrasing it — the reader has already read it. Start where the card " +
+          "stops.",
+        "The caption's job is to be the FIRST ARGUMENT, not the instructions. " +
+          "Take a side and defend it in a line or two, or name the exact opinion " +
+          "someone is about to have about this card. Something a person could " +
+          "disagree with.",
+        "Argue it with reasoning, NOT with evidence. A debate card is an opinion " +
+          "question, and you have not been given any research on it — so no " +
+          "figures, no statistics, no salaries, no percentages, no dates, no studies, " +
+          "no named people, companies, teams or cases, and no \"most people\" claims. " +
+          "If the argument needs a number to work, it is the wrong argument for this " +
+          "card. An honest opinion stated plainly beats a confident invented fact, " +
+          "and this brand argues for sport, not for citation.",
+        "Do not explain how the game works. Everyone scrolling past a debate card " +
+          "can see it is a debate card, and the rules are on it.",
+        "End by asking for their side, not by telling them to play. One question, " +
+          "answerable in a comment, about the card — never \"tag a friend\" or " +
+          "\"bring it to game night\".",
+        "Never claim a post will end friendships, ruin a night, or clear a room. " +
+          "That line has been used more than any other and it is a claim about the " +
+          "reader's friends that the card cannot make.",
       ],
       banned_words: [
         "elevate",

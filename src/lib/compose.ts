@@ -87,6 +87,14 @@ export const PLATFORM_LIMIT: Partial<Record<Platform, number>> = { x: 280 };
 const LENGTH_RETRIES = 2;
 
 /**
+ * How many rewrites to spend getting a brand's banned phrases out of a caption.
+ *
+ * Two, same as the length pass, and for the same reason: the first retry fixes
+ * almost all of them and a third call is money spent on the tail.
+ */
+const PHRASE_RETRIES = 2;
+
+/**
  * The opening line of a Reel caption, in characters.
  *
  * Not the same kind of number as PLATFORM_LIMIT. X REJECTS a post over 280;
@@ -122,7 +130,15 @@ BRAND VOICE:
 - Emoji Style: ${emojiRule(voice.emoji_style)}
 
 BANNED WORDS (never use these): ${voice.banned_words.join(", ")}
-
+${
+  voice.banned_phrases?.length
+    ? `BANNED PHRASES (never use these, in any casing or punctuation — they are
+either already printed on the artwork or true of every post this brand makes, so
+they tell the reader nothing):
+${voice.banned_phrases.map((phrase) => `- "${phrase}"`).join("\n")}
+`
+    : ""
+}
 PREFERRED HASHTAGS: ${voice.hashtags.join(" ")}
 
 ${voice.keywords?.length ? `KEY TOPICS: ${voice.keywords.join(", ")}` : ""}
@@ -139,7 +155,14 @@ CONTENT RULES (non-negotiable):
 6. Every post must have a clear purpose: inform, celebrate, recruit, or inspire action
 7. NEVER put hashtags mid-sentence — always place them at the end
 8. Be specific, not generic. Use real details from the topic rather than restating it.
-
+${
+  voice.house_rules?.length
+    ? `
+HOUSE RULES FOR ${brandName.toUpperCase()} — these override the generic rules above:
+${voice.house_rules.map((rule, i) => `${i + 1}. ${rule}`).join("\n")}
+`
+    : ""
+}
 FACTUAL GROUNDING (the most important rule here):
 The VERIFIED FACTS block in the user message is the only place you may take
 specifics from. Prices, counts, dates, names, features, category lists, product
@@ -241,6 +264,24 @@ export async function composePost(opts: {
       "VERIFIED FACTS: none available. Use no specific numbers, names, prices or feature lists.",
     );
   }
+  // What the picture already says in words. Placed immediately after the facts
+  // because the facts are what it is correcting: on a YODM post the verified
+  // fact and the artwork are the same sentence, so obeying the grounding rule
+  // and writing the picture out again were the same act. 26 of the first 39
+  // captions opened by re-typing the question printed across the card, and a
+  // reader met it twice before the post had said anything.
+  //
+  // Not applied to a video post: those already get the block below, which says
+  // more precisely what may and may not be said about a clip.
+  if (brand.artworkSays && media?.kind !== "video") {
+    parts.push(
+      `ALREADY ON THE PICTURE (do NOT write any of this):\n${brand.artworkSays}\n\n` +
+        "The reader sees the image before the words. Anything above has already been " +
+        "said, so a caption that repeats it has said nothing. Write the part the " +
+        "picture cannot carry.",
+    );
+  }
+
   // What is on screen. Placed with the facts because that is what it is: a
   // sentence a human wrote after watching the clip. The prohibition matters as
   // much as the description — an illustrated character next to a post about a
@@ -400,7 +441,102 @@ ${media.describes}
     }
   }
 
+  // The recital pass. Same shape as the two above and for the same stated
+  // reason: asking is not checking. It matters more than either of them,
+  // because this failure does not look like one. Every caption in the first 39
+  // was well formed, on voice, inside the limit and interchangeable with the
+  // other 38 — 39 of them said "30 seconds", 36 said "92 cards", 33 said "pick
+  // a side", because the card page's site-wide description was the only thing
+  // the grounding rule let them take a specific from.
+  //
+  // Runs after the length and hook passes, and re-checks the limit itself, so a
+  // rewrite cannot buy a clean caption by going over.
+  const banned = bannedPhrasesIn(best.caption, brand.voice.banned_phrases);
+  if (banned.length) {
+    let hits = banned;
+    for (let attempt = 0; attempt < PHRASE_RETRIES && hits.length; attempt++) {
+      messages.push(
+        { role: "assistant", content: JSON.stringify(best) },
+        {
+          role: "user",
+          content:
+            `That caption uses ${hits.length} banned phrase${hits.length === 1 ? "" : "s"}: ` +
+            `${hits.map((h) => `"${h}"`).join(", ")}. Every one of them is already on the ` +
+            `artwork, or true of every post this brand makes, so it tells the reader nothing ` +
+            `— and it is why these captions all read the same.\n\n` +
+            `Rewrite it without them. Do not paraphrase them either: cut the sentences they ` +
+            `are in, and put an actual argument in that space — take a position, or name the ` +
+            `objection, or bring the detail that makes one side harder to hold. Keep every ` +
+            `verified fact, the same subject, and the hashtags at the end — two of the ` +
+            `first rewrites dropped the hashtags on the way out. ` +
+            (limit ? `Stay under ${limit} characters including hashtags. ` : "") +
+            `Reply with the same JSON shape.`,
+        },
+      );
+      const retry = await generate(system, messages, brand.voice, budget);
+      const retryHits = bannedPhrasesIn(retry.caption, brand.voice.banned_phrases);
+      // Only take a retry that is genuinely cleaner AND still postable: a
+      // rewrite that dropped the phrases by running past the limit has traded
+      // one unpostable caption for another.
+      if (retryHits.length < hits.length && (!limit || retry.caption.length <= limit)) {
+        best = retry;
+        hits = retryHits;
+      }
+    }
+    console.log(
+      `compose: ${brand.slug} ${platform} banned phrases ${banned.length} -> ${hits.length}` +
+        (hits.length ? ` (still: ${hits.join(", ")})` : ""),
+    );
+  }
+
+  // Last, so it sees the caption that is actually going out rather than one a
+  // later pass might still rewrite.
+  const tagged = withHashtags(best.caption, brand.voice, limit);
+  if (tagged !== best.caption) {
+    console.log(`compose: ${brand.slug} ${platform} — caption had no hashtags, added the brand's`);
+    best = { ...best, caption: tagged };
+  }
+
   return best;
+}
+
+/**
+ * Which of a brand's banned phrases a caption actually used.
+ *
+ * Case- and punctuation-insensitive between words, so "30 seconds", "30 SECONDS"
+ * and "30-seconds" all count as one phrase. They are the same phrase to the
+ * reader, and the reader is the only measure that matters here.
+ */
+export function bannedPhrasesIn(caption: string, phrases?: string[]): string[] {
+  if (!phrases?.length) return [];
+  const flatten = (text: string) => ` ${text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+  const haystack = flatten(caption);
+  return phrases.filter((phrase) => haystack.includes(flatten(phrase)));
+}
+
+/**
+ * Put the brand's hashtags back on a caption that came out without any.
+ *
+ * Asked for in the prompt since the beginning, and it held while the captions
+ * were formulaic — 37 of the first 39 carried all four. It stopped holding as
+ * soon as the writing got harder: given a house rule to end on a question, the
+ * model ends on the question and puts the pen down, and 3 of 7 test captions
+ * came back with no hashtags at all. That is a reach problem on Instagram, and
+ * it is not worth another model call to fix something this mechanical.
+ *
+ * Only ever ADDS, and only when there is not a single hashtag already: a
+ * caption that chose three of the four made that choice deliberately. Drops
+ * tags from the end rather than overrun a platform limit, and gives up rather
+ * than return something unpostable.
+ */
+function withHashtags(caption: string, voice: VoiceProfile, limit?: number): string {
+  if (!voice.hashtags.length || /#[A-Za-z]/.test(caption)) return caption;
+
+  for (let take = voice.hashtags.length; take > 0; take--) {
+    const candidate = `${caption.trimEnd()}\n\n${voice.hashtags.slice(0, take).join(" ")}`;
+    if (!limit || candidate.length <= limit) return candidate;
+  }
+  return caption;
 }
 
 /** The caption's opening line, which is all Instagram shows before "more". */
