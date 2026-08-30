@@ -332,9 +332,29 @@ export async function composePost(opts: {
    * as a caption re-paired with the wrong topic.
    */
   media?: PostMedia;
+  /**
+   * The day this post is scheduled to go out, "YYYY-MM-DD".
+   *
+   * Without it the writer has no idea when anyone will read what it writes, so
+   * a dated promise gets copied forward forever: on 30 August 2026 a draft
+   * scheduled for 11 December was offering a book that "ships by September 24".
+   * Every fact this app holds is true on the day it was read, and a ship date
+   * is the one kind that stops being true on its own.
+   */
+  postDate?: string;
 }): Promise<GenerateResponse> {
-  const { brand, topic, platform, toneOverride, examples, alreadySaid, brandFacts, budget, media } =
-    opts;
+  const {
+    brand,
+    topic,
+    platform,
+    toneOverride,
+    examples,
+    alreadySaid,
+    brandFacts,
+    budget,
+    media,
+    postDate,
+  } = opts;
   const system = buildSystemPrompt(brand.name, brand.voice, platform, media);
 
   const parts = [`Write a ${platform} post about: ${topic.title}`];
@@ -423,6 +443,24 @@ ${media.describes}
     parts.push(
       "HARD CONSTRAINTS FOR THIS TOPIC — these override everything above:\n" +
         constraints.map((c) => `- ${c.rule}`).join("\n"),
+    );
+  }
+
+  // Dates go stale on their own, and nothing else in this prompt would catch
+  // it: the ship date is a verified fact, correct when it was read, and the
+  // writer has no way to know the post it is writing lands three months later.
+  if (postDate) {
+    parts.push(
+      `THIS POST GOES OUT ON ${postDate}.
+` +
+        "This only governs dates you state as a PROMISE — when something ships, " +
+        "arrives, opens, starts or closes. Such a date has to still be in the " +
+        "future on the day above. If one of the facts you were given has already " +
+        "passed by then, leave the timing out of the post entirely rather than " +
+        "repeating a date that will read as a broken promise, and do not reach for " +
+        "'coming soon' or 'any day now' in its place. A date that is part of the " +
+        "subject rather than a promise — someone's birthday, when a historical " +
+        "event happened, the year a book is set — is unaffected: write it as it is.",
     );
   }
 

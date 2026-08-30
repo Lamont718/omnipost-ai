@@ -76,6 +76,9 @@ export async function POST(request: NextRequest) {
       alreadySaid: priorCaptionsForTopic(await readCaptions(), slug, topic, id),
       brandFacts: factsForSlot((await readAllFacts())[slug]?.facts ?? [], id),
       media: clip ? { kind: "video", describes: clip.describes } : undefined,
+      // The slot id is brand:date:time:platform, so the day this goes out is
+      // already in hand — see `postDate` in lib/compose.ts.
+      postDate: String(id).split(":")[1],
     });
 
     // Timestamps can't come from the runtime clock inside some contexts, but a

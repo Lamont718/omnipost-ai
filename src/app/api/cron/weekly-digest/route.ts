@@ -202,6 +202,7 @@ export async function GET(request: Request) {
               brandFacts: factsForSlot(allFacts[slot.brandSlug]?.facts ?? [], slot.id),
               budget,
               media: clip ? { kind: "video", describes: clip.describes } : undefined,
+              postDate: slot.date,
             });
             // Store the topic with the caption, not just the caption. Topics are
             // re-derived on every read, so without this the pairing is guesswork
