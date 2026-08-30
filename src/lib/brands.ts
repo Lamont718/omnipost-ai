@@ -407,7 +407,7 @@ export const BRANDS: Brand[] = [
       audience:
         "Black parents, teachers and homeschoolers of kids roughly 4–9 looking for learning that reflects their children",
       cultural_context:
-        "Emeka Explores teaches Black history, science, culture and the alphabet to young kids — 130+ illustrated lessons, interactive stories, games and badges, plus free parent guides. Made by a Brooklyn dad for his own kids first.",
+        "Emeka Explores teaches Black history, science, culture and the alphabet to young kids — 130+ illustrated lessons, interactive stories, games and badges, plus free parent guides. Made by a Brooklyn dad for his own kids first. EMEKA IS A GIRL — a seven-year-old girl from Brooklyn with a yellow star on her shirt, she/her every time. Never write 'he', 'his' or 'him' about Emeka. A book blurb that reads 'Emeka, Dad, and Coco' means HER dad, and Coco is her puppy.",
       emoji_style: "minimal",
       banned_words: [
         "empower",
@@ -429,17 +429,27 @@ export const BRANDS: Brand[] = [
         "#RaisingReaders",
         "#BlackKidsRead",
       ],
-      // ⚠️ The My Crown facts below were read off emeka-books.com on 2026-08-22 —
-      // the price, the run size and the September 24 ship date all come from its
-      // buy box. They are the only commerce specifics any caption is allowed to
-      // state, so they have to be re-checked when that run actually ships or the
-      // date silently becomes a false promise in a live post.
+      // ⚠️ The commerce facts below were re-read off the LIVE pages on
+      // emekabooks.com on 2026-08-30, not carried forward. Two things had
+      // changed since 2026-08-22 and both were still being written into
+      // captions:
       //
-      // The books arrived in this brand's rotation on 2026-08-22, and they are
-      // a different kind of post from a lesson: there is something to want, and
-      // for eleven of the twelve there is nothing yet to buy. Every rule below
-      // was read off the live pages on emeka-books.com rather than assumed —
-      // getting this wrong means a caption that sells a book nobody can order.
+      //   1. The signed-and-personalised promise was killed on 2026-08-28. It
+      //      is nowhere on the live buy box any more, but it was still the
+      //      "strongest thing here" in this file, so the writer kept selling
+      //      it. Two drafts carried it. An offer that has been withdrawn from
+      //      the site is still live anywhere it was copied to — this file,
+      //      and Stripe's own confirmation message.
+      //   2. The House That Smiled now has its own Stripe buy link at $40.
+      //      It was still classed as not-for-sale here, so two future drafts
+      //      sent people to an email box for a book they could have bought.
+      //
+      // Live on 2026-08-30, both buyable books: pre-order $40, hardcover,
+      // 20 pages, 11 x 8.5 in, free US shipping, ships by September 24, full
+      // refund if it slips, "not printed yet". The 25-copy first run is stated
+      // on My Crown's offer block only, so it stays scoped to My Crown.
+      // Re-check all of this when the run actually ships, or the September 24
+      // date silently becomes a false promise in a live post.
       topic_constraints: [
         {
           when: /Emeka Books/,
@@ -452,21 +462,29 @@ export const BRANDS: Brand[] = [
             "costs or when it ships beyond what the verified facts above state.",
         },
         {
+          when: /(My Crown|The House That Smiled).*Emeka Books/,
+          rule:
+            "This book CAN be ordered right now, so this post has a real ask. These facts are " +
+            "read off its live page and you may state them: it is a PRE-ORDER at $40, " +
+            "hardcover, 20 pages, 11 x 8.5 in; it ships by September 24 with free US shipping, " +
+            "and there is a full refund if that date slips. It is not printed yet — say so " +
+            "plainly rather than implying it is in stock. Ask once, at the end, and send them " +
+            "to the link in the bio. " +
+            "NEVER say the book is signed, autographed, personalised, or that a child's name " +
+            "is printed in it. That offer was withdrawn on 28 August 2026 and promising it " +
+            "again is a promise nobody can keep. Claim nothing beyond this list.",
+        },
+        {
           when: /My Crown.*Emeka Books/,
           rule:
-            "My Crown is the ONE book that can be ordered, so this post has a real ask. " +
-            "These facts are read off its page and you may state them: it is a PRE-ORDER at " +
-            "$40, hardcover, 20 pages, 11 x 8.5 in; every copy is SIGNED BY LAMONT AND " +
-            "PERSONALISED WITH YOUR CHILD'S NAME; it ships by September 24 with free US " +
-            "shipping, and if it hasn't shipped by then the refund is automatic on request; " +
-            "the first print run is 25 copies, and pre-orders are what pay the printer — once " +
-            "25 are spoken for the run goes in. The signing and the child's name are the " +
-            "strongest thing here: prefer them to the price. Ask plainly once, at the end, and " +
-            "send them to the link in the bio. Claim nothing beyond this list.",
+            "My Crown only: its page also states a first print run of 25 copies, and that " +
+            "pre-orders are what pay the printer — once 25 are spoken for the run goes in. " +
+            "That scarcity is the strongest true thing here: prefer it to the price. Do not " +
+            "attach a print-run number to any other book.",
         },
         {
           when: /Emeka Books/,
-          unless: /My Crown.*Emeka Books/,
+          unless: /(My Crown|The House That Smiled).*Emeka Books/,
           rule:
             "This book is NOT for sale yet — its page has no price and no cart, only a 'Tell me " +
             "when it prints' box that takes an email address. So the ask is exactly that: tell " +
