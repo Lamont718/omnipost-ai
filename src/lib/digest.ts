@@ -88,6 +88,7 @@ const PLATFORM_LABEL: Record<Platform, string> = {
   facebook: "Facebook",
   linkedin: "LinkedIn",
   x: "X",
+  tiktok: "TikTok",
 };
 
 function escapeHtml(s: string): string {

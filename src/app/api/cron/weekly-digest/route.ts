@@ -17,6 +17,7 @@ import {
   pickVideoForSlot,
   pinnable,
   platformPlaysVideo,
+  platformRequiresVideo,
 } from "@/lib/video-library";
 import { createBudget, estimateRun, DEFAULT_RUN_BUDGET_USD } from "@/lib/spend";
 
@@ -178,13 +179,26 @@ export async function GET(request: Request) {
             // tells the writer a video is on screen. Choosing the clip and then
             // refusing to show it would leave a caption written about footage
             // nobody sees.
-            const clip = platformPlaysVideo(slot.platform) && !slot.topic.pageImageWins
+            // pageImageWins means the page has a picture better than a generic
+            // clip — a judgement that only makes sense where a still is a legal
+            // post. On TikTok it is not, so the clip wins regardless.
+            const wantsClip =
+              platformPlaysVideo(slot.platform) &&
+              (platformRequiresVideo(slot.platform) || !slot.topic.pageImageWins);
+            const clip = wantsClip
               ? pickVideoForSlot(
                   videos.get(slot.brandSlug) ?? [],
                   slot.id,
                   slot.topic.url ?? slot.topic.title,
                 )
               : null;
+            // TikTok has no still to fall back to — see platformRequiresVideo.
+            if (platformRequiresVideo(slot.platform) && !clip) {
+              failures.push(
+                `${slot.brandSlug} ${slot.date}: TikTok slot with no clip available — nothing written`,
+              );
+              return;
+            }
             const post = await composePost({
               brand,
               topic: { title: slot.topic.title, context: slot.topic.context },

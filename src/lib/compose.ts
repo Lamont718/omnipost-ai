@@ -65,6 +65,19 @@ function platformRule(platform: Platform, media?: PostMedia): string {
         : "Visual storytelling tone. The caption should complement an image, not describe it.";
     case "facebook":
       return "Conversational and community-oriented. Can run slightly longer.";
+    case "tiktok":
+      // TikTok is the one platform here that shows a post mostly to people who
+      // do NOT follow the account, so nothing can be assumed known — not the
+      // brand, not the characters, not what went out last week. And the hook is
+      // not the caption: it is the first second of the clip. A caption that
+      // repeats the hook spends the only line anyone reads saying it twice.
+      return [
+        "This post is a TIKTOK: a short vertical video. The video carries the hook, not the caption.",
+        "Write ONE or TWO short lines, under about 100 characters before the hashtags. Anything longer is cut off and nobody taps to expand it.",
+        "Assume the reader has never heard of this brand and does not follow it. No in-jokes, no callbacks, nothing that needs a previous post to make sense.",
+        "Sound like a person typing, not a brand announcing. No slogans, no sign-offs, no 'Check out'.",
+        "Never tell anyone to watch, look at, swipe or tap the video, and never describe what is in it.",
+      ].join(" ");
   }
 }
 

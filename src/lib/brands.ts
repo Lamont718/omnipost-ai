@@ -401,6 +401,16 @@ export const BRANDS: Brand[] = [
       { day: 1, time: "09:00", platform: "instagram" },
       { day: 3, time: "19:00", platform: "instagram" },
       { day: 5, time: "09:00", platform: "instagram", topics: "books" },
+      // TikTok, added 30 Aug 2026. One a week, not three: TikTok rewards
+      // frequency more than anything else here, but every post on this
+      // calendar is one Lamont pastes in by hand, and the tick rate says
+      // the constraint is his thumb rather than the schedule. Raise it once
+      // posts are actually going out.
+      //
+      // Video only, and enforced — see platformRequiresVideo. The thirty
+      // clips under library/emeka-explores/video/ are what this draws from,
+      // so this slot cannot be copied to a brand with no clips.
+      { day: 2, time: "17:00", platform: "tiktok" },
     ],
     voice: {
       tone: "Warm, proud, parent-to-parent — encouraging without being saccharine",

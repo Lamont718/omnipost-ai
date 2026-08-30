@@ -9,6 +9,7 @@ import {
   pickVideoForSlot,
   pinnable,
   platformPlaysVideo,
+  platformRequiresVideo,
 } from "@/lib/video-library";
 import { Platform } from "@/lib/types";
 
@@ -58,10 +59,24 @@ export async function POST(request: NextRequest) {
     // can be composed against what is actually on screen. The pick is
     // deterministic on the slot id and the topic, so a reroll of the wording
     // lands on the same clip rather than silently swapping the video.
+    // See the note in the weekly cron: on TikTok a page picture cannot win,
+    // because the alternative to a clip is no post at all.
     const clip =
-      platformPlaysVideo(platform) && !topic.pageImageWins
+      platformPlaysVideo(platform) &&
+      (platformRequiresVideo(platform) || !topic.pageImageWins)
         ? pickVideoForSlot(await videosFor(slug), id, topic.url ?? topic.title)
         : null;
+
+    if (platformRequiresVideo(platform) && !clip) {
+      return NextResponse.json(
+        {
+          error:
+            "TikTok posts are video only, and this brand has no clip for this slot. " +
+            "Add a clip under library/" + slug + "/video/ before writing this post.",
+        },
+        { status: 422 },
+      );
+    }
 
     // Read once and use twice: the same snapshot answers "what has this brand
     // said about this topic" and "how has it been opening posts lately".

@@ -28,14 +28,28 @@ import type { Platform } from "./types";
 /**
  * Where a clip is used at all.
  *
- * Instagram only, for now, and deliberately in one place so the caption writer,
+ * Instagram and TikTok, and deliberately in one place so the caption writer,
  * the calendar and the publisher cannot disagree about it. Video posts fine on
  * X; what does not exist yet is an X preview that plays one, and a surface that
  * shows a still where the sheet shows a clip is exactly the three-way drift this
  * app has fixed twice already.
  */
 export function platformPlaysVideo(platform?: Platform): boolean {
-  return !platform || platform === "instagram";
+  return !platform || platform === "instagram" || platform === "tiktok";
+}
+
+/**
+ * Where a clip is not optional.
+ *
+ * Instagram takes a photo or a Reel, so a still is a worse post but a post. On
+ * TikTok there is no still to fall back to — the video IS the post, and a
+ * caption written for a slot with no clip is a post that cannot be made. That
+ * has to fail loudly at write time: this app has already shipped 36 captions
+ * for slots nothing renders, and the way that happened was something being
+ * written anyway and nobody being told.
+ */
+export function platformRequiresVideo(platform?: Platform): boolean {
+  return platform === "tiktok";
 }
 
 const PREFIX = "library/";

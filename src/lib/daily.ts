@@ -30,6 +30,7 @@ const PLATFORM_NAME: Record<Platform, string> = {
   facebook: "Facebook",
   linkedin: "LinkedIn",
   x: "X",
+  tiktok: "TikTok",
 };
 
 /** Today's date in New York, as YYYY-MM-DD. */

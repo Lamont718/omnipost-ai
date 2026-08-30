@@ -45,6 +45,7 @@ const NETWORK_COLUMN: Record<Platform, string> = {
   x: "Twitter",
   linkedin: "LinkedIn",
   instagram: "Instagram",
+  tiktok: "TikTok",
 };
 
 /** Every network column, so the ones we aren't posting to can be set FALSE. */

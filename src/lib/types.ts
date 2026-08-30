@@ -6,7 +6,7 @@ export type PostStatus =
   | "published"
   | "rejected";
 
-export type Platform = "instagram" | "facebook" | "linkedin" | "x";
+export type Platform = "instagram" | "facebook" | "linkedin" | "x" | "tiktok";
 
 export type EmojiStyle = "minimal" | "moderate" | "none";
 

@@ -76,6 +76,7 @@ const PLATFORM_TAG: Record<Platform, string> = {
   facebook: "FB",
   linkedin: "LI",
   x: "X",
+  tiktok: "TT",
 };
 
 function to12h(time: string): string {

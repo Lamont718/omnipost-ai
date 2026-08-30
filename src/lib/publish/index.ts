@@ -187,11 +187,21 @@ export async function publishSlot(id: string, origin: string): Promise<PublishOu
       if (!account) throw new Error(`${brand.name} has no Facebook Page connected`);
       const image = publishableImageUrl(artwork.url, origin, false);
       ({ remoteId, permalink } = await publishToFacebook(account, caption, image));
-    } else {
+    } else if (platform === "x") {
       const account = xAccount(brand.slug);
       if (!account) throw new Error(`${brand.name} has no X account connected`);
       const image = publishableImageUrl(artwork.url, origin, false);
       ({ remoteId, permalink } = await publishToX(account, caption, image));
+    } else {
+      // Named, not defaulted. This used to be a bare `else` that sent
+      // anything unrecognised to X — which was harmless only while X was the
+      // last platform in the union. It stopped being harmless the moment
+      // TikTok was added: a vertical clip and a caption written for TikTok
+      // would have gone out as a tweet, under his name, with nothing saying
+      // so. LinkedIn had the same hole and nobody had hit it yet.
+      throw new Error(
+        `${brand.name}: publishing to ${platform} is not built yet — post it by hand from /sheet`,
+      );
     }
 
     const publishedAt = new Date().toISOString();

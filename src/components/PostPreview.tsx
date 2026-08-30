@@ -39,6 +39,7 @@ export const PLATFORM_NAME: Record<Platform, string> = {
   facebook: "Facebook",
   linkedin: "LinkedIn",
   x: "X",
+  tiktok: "TikTok",
 };
 
 /** Hard caption limits, so an over-length post is obvious before it's posted. */
@@ -47,6 +48,10 @@ export const PLATFORM_LIMIT: Record<Platform, number> = {
   facebook: 63206,
   linkedin: 3000,
   x: 280,
+  // TikTok accepts 2200, but the visible part of a caption is roughly the
+  // first 100 before it is cut. The ceiling is what the platform rejects;
+  // keeping it short is house style, enforced in compose.ts.
+  tiktok: 2200,
 };
 
 const BLUE = "#1d9bf0";
