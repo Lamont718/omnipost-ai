@@ -6,6 +6,7 @@ import {
   compactCaptions,
   priorCaptionsForTopic,
   readCaptions,
+  recentOpenings,
   writeCaptions,
   CaptionMap,
 } from "@/lib/store";
@@ -203,6 +204,7 @@ export async function GET(request: Request) {
               budget,
               media: clip ? { kind: "video", describes: clip.describes } : undefined,
               postDate: slot.date,
+              recentOpenings: recentOpenings({ ...already, ...captions }, slot.brandSlug, slot.id),
             });
             // Store the topic with the caption, not just the caption. Topics are
             // re-derived on every read, so without this the pairing is guesswork

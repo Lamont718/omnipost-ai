@@ -342,6 +342,14 @@ export async function composePost(opts: {
    * is the one kind that stops being true on its own.
    */
   postDate?: string;
+  /**
+   * How this brand has been opening its recent posts, across every topic.
+   *
+   * `alreadySaid` is about this subject; this is about this brand's habits.
+   * See `recentOpenings` in lib/store.ts for the duplicates that got past the
+   * subject test.
+   */
+  recentOpenings?: string[];
 }): Promise<GenerateResponse> {
   const {
     brand,
@@ -354,6 +362,7 @@ export async function composePost(opts: {
     budget,
     media,
     postDate,
+    recentOpenings,
   } = opts;
   const system = buildSystemPrompt(brand.name, brand.voice, platform, media);
 
@@ -461,6 +470,19 @@ ${media.describes}
         "'coming soon' or 'any day now' in its place. A date that is part of the " +
         "subject rather than a promise — someone's birthday, when a historical " +
         "event happened, the year a book is set — is unaffected: write it as it is.",
+    );
+  }
+
+  if (recentOpenings?.length) {
+    parts.push(
+      "HOW THIS BRAND HAS BEEN OPENING ITS RECENT POSTS:\n" +
+        recentOpenings.map((o) => `- ${o}`).join("\n") +
+        "\n\nDo not open with any of these, or with a lightly reworded version of " +
+        "one. This is not about the subject — it is about the first line a reader " +
+        "sees, and two posts in a feed that start the same way read as one post " +
+        "sent twice however different the rest is. A house catchphrase counts: if " +
+        "an opening above is a formula this brand keeps reaching for, that is the " +
+        "strongest reason to start somewhere else.",
     );
   }
 

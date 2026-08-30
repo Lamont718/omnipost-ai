@@ -141,6 +141,61 @@ export function priorCaptionsForTopic(
     .map((m) => m.caption);
 }
 
+/**
+ * The opening line of this brand's most recent captions, whatever they were about.
+ *
+ * `priorCaptionsForTopic` above catches a repeat of the same SUBJECT. It cannot
+ * catch a repeat of the same SENTENCE, because it only ever shows the writer
+ * captions matched on url or title — and the duplicates that actually made it
+ * into the queue were not matched by either:
+ *
+ *   "Nobody's asking you to give up oxtail."  — Heart-smart oxtail (31 Aug)
+ *                                             — Oxtail, the heart-smart way (26 Oct)
+ *   "July 8, 2010."                           — two Decision pages, two titles
+ *   "Chess isn't just about the board."       — Beyond Chess, eight weeks apart
+ *
+ * One dish, one moment, one programme, written up under two different page
+ * titles, so the identity test said "different topic" and the writer opened
+ * both the same way. A reader scrolling a feed does not know the titles
+ * differed. They just see the same first line twice.
+ *
+ * So this is the other half: not what you said about this topic, but how you
+ * have been starting sentences lately. Openings only — the whole caption would
+ * be a wall of text the writer skims, and the first line is the part that
+ * repeats.
+ */
+export function recentOpenings(
+  captions: CaptionMap,
+  brandSlug: string,
+  excludeId: string,
+  limit = 12,
+): string[] {
+  const prefix = `${brandSlug}:`;
+  const rows: { at: string; opening: string }[] = [];
+
+  for (const [id, stored] of Object.entries(captions)) {
+    if (id === excludeId || !id.startsWith(prefix) || !stored?.caption) continue;
+    // The first sentence, or the first line if the caption opens with a
+    // fragment. Quotation marks are kept: a YODM card's own question is the
+    // legitimate opening for every post about that card, and stripping the
+    // quotes would make those look like a tic they are not.
+    const first = stored.caption.trim().split(/(?<=[.!?])\s|\n/)[0].trim();
+    if (first.length < 10) continue;
+    rows.push({ at: stored.editedAt ?? stored.generatedAt ?? "", opening: first.slice(0, 120) });
+  }
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of rows.sort((a, b) => b.at.localeCompare(a.at))) {
+    const k = r.opening.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(r.opening);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 /** The compacted map. Written only by compactCaptions. */
 const BASE_KEY = "captions.json";
 /** One blob per caption, written by on-demand saves. */

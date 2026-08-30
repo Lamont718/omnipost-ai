@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { brandBySlug } from "@/lib/brands";
 import { composePost } from "@/lib/compose";
-import { priorCaptionsForTopic, readCaptions, writeCaptions } from "@/lib/store";
+import { priorCaptionsForTopic, readCaptions, recentOpenings, writeCaptions } from "@/lib/store";
 import { loadExampleBank, pickExamples } from "@/lib/examples";
 import { readAllFacts, factsForSlot } from "@/lib/facts";
 import {
@@ -63,6 +63,10 @@ export async function POST(request: NextRequest) {
         ? pickVideoForSlot(await videosFor(slug), id, topic.url ?? topic.title)
         : null;
 
+    // Read once and use twice: the same snapshot answers "what has this brand
+    // said about this topic" and "how has it been opening posts lately".
+    const stored_captions = await readCaptions();
+
     const post = await composePost({
       brand,
       topic: { title: topic.title, context: topic.context },
@@ -73,7 +77,9 @@ export async function POST(request: NextRequest) {
       // one slot is exactly where a near-duplicate slips in: the topic is the
       // same by definition, and until now the writer could not see the post
       // sitting six weeks away on the same page.
-      alreadySaid: priorCaptionsForTopic(await readCaptions(), slug, topic, id),
+      alreadySaid: priorCaptionsForTopic(stored_captions, slug, topic, id),
+      // The other half of not repeating yourself — see lib/store.ts.
+      recentOpenings: recentOpenings(stored_captions, slug, id),
       brandFacts: factsForSlot((await readAllFacts())[slug]?.facts ?? [], id),
       media: clip ? { kind: "video", describes: clip.describes } : undefined,
       // The slot id is brand:date:time:platform, so the day this goes out is
