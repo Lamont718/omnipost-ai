@@ -142,7 +142,8 @@ export function priorCaptionsForTopic(
 }
 
 /**
- * The opening line of this brand's most recent captions, whatever they were about.
+ * The opening lines of this brand's nearest posts in the calendar, whatever they
+ * were about.
  *
  * `priorCaptionsForTopic` above catches a repeat of the same SUBJECT. It cannot
  * catch a repeat of the same SENTENCE, because it only ever shows the writer
@@ -168,10 +169,11 @@ export function recentOpenings(
   captions: CaptionMap,
   brandSlug: string,
   excludeId: string,
-  limit = 12,
+  limit = 30,
 ): string[] {
   const prefix = `${brandSlug}:`;
-  const rows: { at: string; opening: string }[] = [];
+  const rows: { away: number; opening: string }[] = [];
+  const target = Date.parse(excludeId.split(":")[1] ?? "");
 
   for (const [id, stored] of Object.entries(captions)) {
     if (id === excludeId || !id.startsWith(prefix) || !stored?.caption) continue;
@@ -181,12 +183,18 @@ export function recentOpenings(
     // quotes would make those look like a tic they are not.
     const first = stored.caption.trim().split(/(?<=[.!?])\s|\n/)[0].trim();
     if (first.length < 10) continue;
-    rows.push({ at: stored.editedAt ?? stored.generatedAt ?? "", opening: first.slice(0, 120) });
+    // Nearest in the CALENDAR, not most recently written. After a fill run
+    // every caption carries the same timestamp within a second, so "recent"
+    // by generatedAt is arbitrary — and the thing being prevented is two posts
+    // near each other in a feed opening alike. Distance in days is that.
+    const at = Date.parse(id.split(":")[1] ?? "");
+    const away = Number.isNaN(at) || Number.isNaN(target) ? Infinity : Math.abs(at - target);
+    rows.push({ away, opening: first.slice(0, 120) });
   }
 
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const r of rows.sort((a, b) => b.at.localeCompare(a.at))) {
+  for (const r of rows.sort((a, b) => a.away - b.away)) {
     const k = r.opening.toLowerCase();
     if (seen.has(k)) continue;
     seen.add(k);
