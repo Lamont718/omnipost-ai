@@ -22,6 +22,7 @@ import {
   PLATFORM_LIMIT,
   generatedImageUrl,
 } from "@/components/PostPreview";
+import { PLATFORMS as ALL_PLATFORMS, type Platform } from "@/lib/types";
 import { usePosted } from "@/lib/use-posted";
 
 /** Shape returned by /api/schedule. */
@@ -29,7 +30,7 @@ interface SlotPost {
   id: string;
   date: string; // YYYY-MM-DD
   time: string; // HH:MM
-  platform: "instagram" | "facebook" | "linkedin" | "x";
+  platform: Platform;
   brand: { slug: string; name: string; colorHex: string };
   topic: { title: string; context?: string; url?: string; source: string };
   caption: string | null;
@@ -45,9 +46,10 @@ const PLATFORM_LABEL: Record<SlotPost["platform"], string> = {
   facebook: "FB",
   linkedin: "LI",
   x: "X",
+  tiktok: "TT",
 };
 
-const PLATFORMS: SlotPost["platform"][] = ["instagram", "facebook", "linkedin", "x"];
+const PLATFORMS: SlotPost["platform"][] = [...ALL_PLATFORMS];
 
 /**
  * Locally-written captions, so the tool needs no login. The "posted" flags used

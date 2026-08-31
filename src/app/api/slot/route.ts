@@ -11,12 +11,12 @@ import {
   platformPlaysVideo,
   platformRequiresVideo,
 } from "@/lib/video-library";
-import { Platform } from "@/lib/types";
+import { PLATFORMS } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const PLATFORMS: Platform[] = ["instagram", "facebook", "linkedin", "x"];
+
 
 /**
  * Write (or rewrite) the caption for one calendar slot, on demand.
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    if (!PLATFORMS.includes(platform)) {
+    if (!(PLATFORMS as readonly string[]).includes(platform)) {
       return NextResponse.json({ error: "invalid platform" }, { status: 400 });
     }
 

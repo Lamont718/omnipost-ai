@@ -6,7 +6,26 @@ export type PostStatus =
   | "published"
   | "rejected";
 
-export type Platform = "instagram" | "facebook" | "linkedin" | "x" | "tiktok";
+/**
+ * Every platform, and the type derived from it — in that order, deliberately.
+ *
+ * Platform used to be a hand-written union, and the list of platforms was
+ * hand-written again in six other files as `Platform[]` or a regex. Adding
+ * TikTok updated the union, so every `Record<Platform, …>` failed to compile
+ * and got fixed — and every one of those six arrays kept its old four members
+ * without a word, because a short array is still assignable to Platform[].
+ * /api/slot answered "invalid platform" for a slot the calendar was happily
+ * showing.
+ *
+ * Deriving the type from the array inverts that: the array is the thing you
+ * edit, and it cannot be out of date with itself.
+ */
+export const PLATFORMS = ["instagram", "facebook", "linkedin", "x", "tiktok"] as const;
+
+export type Platform = (typeof PLATFORMS)[number];
+
+/** `instagram|facebook|linkedin|x|tiktok` — for parsing a slot id. */
+export const PLATFORM_PATTERN = PLATFORMS.join("|");
 
 export type EmojiStyle = "minimal" | "moderate" | "none";
 

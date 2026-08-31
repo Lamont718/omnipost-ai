@@ -1,3 +1,4 @@
+import { PLATFORM_PATTERN } from "../types";
 import { brandBySlug } from "../brands";
 import { libraryFor } from "../library";
 import { videosFor } from "../video-library";
@@ -61,7 +62,9 @@ function publishableImageUrl(imageUrl: string, origin: string, square: boolean):
 
 /** Find one slot the same way the calendar and the sheet find it. */
 async function resolvePost(id: string, origin: string) {
-  const match = id.match(/^(.+):(\d{4}-\d{2}-\d{2}):(\d{2}:\d{2}):(instagram|facebook|linkedin|x)$/);
+  const match = id.match(
+    new RegExp(`^(.+):(\\d{4}-\\d{2}-\\d{2}):(\\d{2}:\\d{2}):(${PLATFORM_PATTERN})$`),
+  );
   if (!match) throw new Error(`"${id}" is not a slot id`);
 
   const [, brandSlug, date] = match;

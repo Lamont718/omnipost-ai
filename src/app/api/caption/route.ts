@@ -3,7 +3,7 @@ import { readCaptions, writeCaptions } from "@/lib/store";
 import { brandBySlug } from "@/lib/brands";
 import { pinnable, videosFor } from "@/lib/video-library";
 import { PLATFORM_LIMIT } from "@/lib/compose";
-import type { Platform } from "@/lib/types";
+import { PLATFORM_PATTERN, type Platform } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,7 +39,7 @@ const MAX_CAPTION = 8000;
 
 /** The platform is the last segment of a slot id: brand:date:HH:MM:platform. */
 function platformOf(id: string): Platform | null {
-  const match = id.match(/:(instagram|facebook|linkedin|x)$/);
+  const match = id.match(new RegExp(`:(${PLATFORM_PATTERN})$`));
   return match ? (match[1] as Platform) : null;
 }
 

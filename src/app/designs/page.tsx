@@ -10,7 +10,7 @@ import {
   PLATFORM_LIMIT,
   PreviewBrand,
 } from "@/components/PostPreview";
-import { Platform } from "@/lib/types";
+import { PLATFORMS as ALL_PLATFORMS, Platform } from "@/lib/types";
 
 /**
  * The showroom: one page that answers "what is this thing actually going to
@@ -35,7 +35,7 @@ interface SlotPost {
   video?: string | null;
 }
 
-const PLATFORMS: Platform[] = ["instagram", "facebook", "linkedin", "x"];
+const PLATFORMS: Platform[] = [...ALL_PLATFORMS];
 
 export default function DesignsPage() {
   const [posts, setPosts] = useState<SlotPost[]>([]);

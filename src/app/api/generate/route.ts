@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { brandBySlug, BRANDS } from "@/lib/brands";
 import { composePost } from "@/lib/compose";
-import { Platform } from "@/lib/types";
+import { PLATFORMS } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const PLATFORMS: Platform[] = ["instagram", "facebook", "linkedin", "x"];
+
 
 /**
  * Draft a single post on demand.
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!PLATFORMS.includes(platform)) {
+    if (!(PLATFORMS as readonly string[]).includes(platform)) {
       return NextResponse.json(
         { error: `platform must be one of: ${PLATFORMS.join(", ")}` },
         { status: 400 },

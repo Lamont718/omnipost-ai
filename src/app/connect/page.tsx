@@ -41,7 +41,7 @@ interface AccountCheck {
 interface SlotView {
   id: string;
   date: string;
-  platform: "instagram" | "facebook" | "linkedin" | "x";
+  platform: "instagram" | "facebook" | "linkedin" | "x" | "tiktok";
   caption: string | null;
   video?: string | null;
   brand: { slug: string; name: string; colorHex: string };
