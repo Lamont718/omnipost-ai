@@ -835,10 +835,21 @@ export const BRANDS: Brand[] = [
     // The site's own theme-color, so the calendar dot matches the real brand.
     colorHex: "#c23a22",
     tagline: "Brooklyn heart health",
-    // ⚠️ There are no social accounts for this brand yet. Posts are being
-    // written ahead of the accounts existing, at Lamont's request — so treat
-    // the queue as a bank of drafts, not something anyone is waiting on.
-    active: true,
+    /*
+     * Off, 2026-08-31, because Lamont said he doesn't need posts for this one.
+     *
+     * The comment that used to sit here said the queue was a bank of drafts,
+     * written ahead of accounts that did not exist yet. The accounts are not
+     * coming, so the bank has no depositor. It was writing a post every Monday
+     * at 18:00 into nothing: 21 captions across Jun 2026 - Jan 2027, 18 of them
+     * still ahead of today, plus 3 sitting in the backlog as missed posts that
+     * could not have been missed.
+     *
+     * Nothing is deleted. The captions stay in storage keyed by slot id and are
+     * simply never resolved again; flipping this back to true brings all of it
+     * straight back.
+     */
+    active: false,
     // The site has real food photography but sets og:image on none of the
     // lesson or recipe pages, so posts were falling back to a generated card.
     // These are the actual pictures heartoftheblock.org serves, already public
