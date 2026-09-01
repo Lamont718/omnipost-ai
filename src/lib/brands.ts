@@ -276,6 +276,18 @@ export const BRANDS: Brand[] = [
       "the card's question in large type, its category, and the YODM logo — a reader " +
       "has already read the question before reaching the first word of the caption",
     schedule: [
+      // Added 2026-09-01 at Lamont's request, matching Emeka's Tuesday 17:00
+      // pattern. Switched on only after the clips existed: TikTok is the one
+      // platform where platformRequiresVideo() is true, so a slot with an empty
+      // library writes captions for posts that cannot be made. library/yodm/video/
+      // now holds 14 clips, each with its poster — four cut locally from the 2025
+      // drinking episode with the yodm.com end card, ten from the EP98 OpusClip
+      // set. At one a week that is roughly fourteen weeks of runway.
+      //
+      // ⚠️ This puts two YODM posts on a Tuesday, TikTok at 17:00 and the
+      // Instagram card at 18:00. Deliberate, and easy to move if it reads as
+      // too much on one day.
+      { day: 2, time: "17:00", platform: "tiktok" },
       { day: 2, time: "18:00", platform: "instagram" },
       { day: 4, time: "19:00", platform: "instagram" },
       { day: 6, time: "11:00", platform: "x" },
