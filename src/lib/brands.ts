@@ -657,10 +657,25 @@ export const BRANDS: Brand[] = [
     colorHex: "#DC2626",
     tagline: "NBA culture & commentary",
     active: true,
+    // Given by Lamont 2026-09-01 and checked against the live profile:
+    // "MostHatedNBA (@NbaHated)", 30 posts, 0 following, 1 follower, joined
+    // April 2026, dormant since 31 May. The banner carries mosthatednba.com.
+    // The slug fallback would have said @mosthated, which is somebody else.
+    //
+    // X only. This brand has no Instagram account, and its Instagram slot came
+    // off the schedule the same day, so this one brand-wide field can only ever
+    // render on an X row. If an Instagram slot is ever added back, get the real
+    // Instagram handle first — otherwise this claims @NbaHated on Instagram,
+    // where it is not true, which is the bug the note on `handle` warns about.
+    handle: "@NbaHated",
     schedule: [
       { day: 1, time: "20:00", platform: "x" },
       { day: 3, time: "20:00", platform: "x" },
-      { day: 5, time: "12:00", platform: "instagram" },
+      // Friday 12:00 Instagram removed 2026-09-01, Lamont's call. There is no
+      // MostHatedNBA Instagram account, so this slot had 14 written posts
+      // queued for a place that does not exist — the same shape as The
+      // Conductor in the note on BrandReadiness.handle in accounts.ts. Put it
+      // back only once an account exists and its handle is recorded above.
       { day: 0, time: "19:00", platform: "x" },
     ],
     voice: {
