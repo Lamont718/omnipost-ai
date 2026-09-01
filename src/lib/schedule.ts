@@ -90,12 +90,17 @@ async function brandPostsInRange(
       };
 
       const date = iso(cursor);
+      // A brand's handle can differ by network — YODM is @y_o_d_m on TikTok and
+      // @yodm_debate on Instagram and X — so resolve against this slot's own
+      // platform. Carrying one brand-wide name onto every mock-up would put a
+      // real handle on the wrong network, which reads as correct and isn't.
+      const handle = brand.handles?.[slot.platform] ?? brand.handle;
       out.push({
         id: slotId(brand.slug, date, slot),
         brandSlug: brand.slug,
         brandName: brand.name,
         colorHex: brand.colorHex,
-        ...(brand.handle ? { handle: brand.handle } : {}),
+        ...(handle ? { handle } : {}),
         date,
         time: slot.time,
         platform: slot.platform,

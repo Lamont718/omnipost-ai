@@ -73,8 +73,24 @@ export interface Brand {
    *
    * Only fill this in from a handle he has actually given, checked against the
    * live profile. A guessed handle here is the same bug with more confidence.
+   *
+   * This is the brand-wide default. Where a network differs, `handles` below
+   * wins — resolution happens in schedule.ts, against the slot's own platform.
    */
   handle?: string;
+  /**
+   * Per-platform overrides, for brands whose handle is not the same everywhere.
+   *
+   * YODM is @yodm_debate on Instagram and X but @y_o_d_m on TikTok. One
+   * brand-wide name cannot be true for both, and the mock-up would have put
+   * the Instagram handle on a TikTok post — the same class of bug as the slug
+   * fallback described above, just harder to spot because the handle is real.
+   *
+   * Only name the platforms that actually differ; everything else falls back
+   * to `handle`. Same rule as `handle`: only from a handle he has given,
+   * checked against the live profile.
+   */
+  handles?: Partial<Record<Platform, string>>;
   /**
    * Artwork this brand already publishes, as absolute URLs. Used ahead of the
    * page's share image, same as a Blob library — for a site that hosts good
@@ -223,6 +239,11 @@ export const BRANDS: Brand[] = [
     // (@yodm_debate)", 162 followers, 135 posts. The slug fallback said @yodm,
     // which is somebody else.
     handle: "@yodm_debate",
+    // Given by Lamont 2026-09-01 and checked against the live profile: TikTok
+    // "Your Opinion Doesn't Matter (y_o_d_m)", 155 followers, 1,757 likes, bio
+    // linking yodmpodcast.com and yodm.com. Deliberately different from the
+    // Instagram and X handle above — this brand is the reason `handles` exists.
+    handles: { tiktok: "@y_o_d_m" },
     // Was stood down on 2026-08-09 in favour of The Shop (repos/the-shop),
     // which writes YODM from the 92-card deck with its own rendered images and
     // a Critic agent. Turned back on the same day at Lamont's request.
@@ -385,6 +406,12 @@ export const BRANDS: Brand[] = [
     // Created 2026-08-22. Note the underscore: @emekaexplores without it is a
     // different account with 506 followers and 588 posts.
     handle: "@emeka_explores",
+    // Given by Lamont 2026-09-01 and checked against the live profile: TikTok
+    // "Emeka_Explores (emeka_explores)", 0 following, 0 followers, no bio yet.
+    // New and empty, but real. It matches the Instagram handle today; recorded
+    // explicitly so the Tuesday TikTok slot never depends on the two staying
+    // the same if either is ever renamed.
+    handles: { tiktok: "@emeka_explores" },
     // The book covers are served from emekabooks.com, which is now also the
     // host this brand's sitemap is read from. Verified 2026-08-24: both hosts
     // return the identical 134,012-byte cover.jpg, and only the hyphenated one

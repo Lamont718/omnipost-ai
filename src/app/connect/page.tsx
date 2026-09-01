@@ -44,7 +44,9 @@ interface SlotView {
   platform: "instagram" | "facebook" | "linkedin" | "x" | "tiktok";
   caption: string | null;
   video?: string | null;
-  brand: { slug: string; name: string; colorHex: string };
+  // `handle` is the one schedule.ts resolved for this slot's platform, so it is
+  // the handle to show on a row — not the brand-wide default.
+  brand: { slug: string; name: string; colorHex: string; handle?: string };
 }
 
 type Platform = "instagram" | "x";
@@ -166,7 +168,10 @@ export default function ConnectPage() {
         sendable: 0,
         reels: 0,
         connected: p.platform === "instagram" ? !!ready?.instagram : !!ready?.x,
-        handle: ready?.handle ?? null,
+        // The slot's handle, not the brand's: schedule.ts has already resolved
+        // it against this row's platform. Reading the brand-wide one would show
+        // a TikTok brand's Instagram handle the day TikTok appears on this page.
+        handle: p.brand.handle ?? null,
         check:
           p.platform === "instagram"
             ? checks?.find((c) => c.slug === p.brand.slug)

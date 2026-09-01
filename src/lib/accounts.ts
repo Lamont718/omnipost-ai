@@ -168,6 +168,11 @@ export interface BrandReadiness {
    * surface asked only whether the keys were set. A brand with no handle on
    * file is the shape of that, and it is worth showing before asking anyone to
    * go and generate tokens for it.
+   *
+   * Brand-wide, because readiness is per brand and not per platform. Where a
+   * brand's handle differs by network, the per-platform one is resolved in
+   * schedule.ts and rides on the slot — prefer that anywhere a platform is
+   * known. This stays the answer to "has anybody recorded a handle at all".
    */
   handle: string | null;
 }
