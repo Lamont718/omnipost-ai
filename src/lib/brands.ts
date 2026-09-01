@@ -756,6 +756,20 @@ export const BRANDS: Brand[] = [
     // 132 followers, 33 posts. The slug fallback would have said @wwsh, which
     // is a different, dormant account.
     handle: "@wwsh_community_nyc",
+    // Given by Lamont 2026-09-01 and checked against the live profile:
+    // linkedin.com/in/lamont-kirton-17058b333, "Lamont Kirton — Founder & CEO,
+    // Working Wonders Starting Home Inc.", Jamaica NY, 3 connections. It is his
+    // personal profile rather than a company page, which is why it sits on the
+    // WWSH brand: the banner is WWSH's and the posts would be WWSH's.
+    //
+    // Recorded, deliberately not scheduled. There is no LinkedIn slot on this
+    // brand and no LinkedIn support in the publisher — readiness only knows
+    // instagram, facebook and x, and /connect only builds instagram and x rows.
+    // A slot here today would write posts nothing can send and no page would
+    // show as waiting, which is worse than the MostHatedNBA Instagram case
+    // because that one at least showed up in red. Three connections is the
+    // other reason to wait.
+    handles: { linkedin: "linkedin.com/in/lamont-kirton-17058b333" },
     // communitynyc.org serves the same chess-programme photo as og:image on
     // every page, so basketball posts were going out illustrated with chess.
     // Lift this the moment WWSH has real basketball photos in library/wwsh/.
