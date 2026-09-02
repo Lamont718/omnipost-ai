@@ -276,18 +276,31 @@ export const BRANDS: Brand[] = [
       "the card's question in large type, its category, and the YODM logo — a reader " +
       "has already read the question before reaching the first word of the caption",
     schedule: [
-      // Added 2026-09-01 at Lamont's request, matching Emeka's Tuesday 17:00
-      // pattern. Switched on only after the clips existed: TikTok is the one
-      // platform where platformRequiresVideo() is true, so a slot with an empty
-      // library writes captions for posts that cannot be made. library/yodm/video/
-      // now holds 14 clips, each with its poster — four cut locally from the 2025
-      // drinking episode with the yodm.com end card, ten from the EP98 OpusClip
-      // set. At one a week that is roughly fourteen weeks of runway.
+      // TikTok Tuesday 17:00 was added 2026-09-01 and REMOVED 2026-09-02, one
+      // day later, at Lamont's call. Worth keeping the reason, because the slot
+      // will come back.
       //
-      // ⚠️ This puts two YODM posts on a Tuesday, TikTok at 17:00 and the
-      // Instagram card at 18:00. Deliberate, and easy to move if it reads as
-      // too much on one day.
-      { day: 2, time: "17:00", platform: "tiktok" },
+      // The slot itself was never the problem. The library behind it was:
+      // library/yodm/video/ holds fourteen clips cut from the PODCAST and from
+      // an ad, and every one carries burned-in captions about its own subject —
+      // sobriety, or EP98 fatherhood headlines. Paired with a debate card by
+      // rotation, a viewer read "Stop Being a Bum Dad" on screen while the
+      // caption asked about television. The worst pairing put "Is torture
+      // justified for national security?" over two men joking about drinking.
+      //
+      // His words: "we have to come very close to the actual game". None of
+      // those clips has the game in it, so no amount of better pairing would
+      // have fixed it. Tag matching cannot help here either — pickVideoForSlot
+      // matches tags against topic.url, and YODM's are yodm.com/card/65, a bare
+      // number with no words in it.
+      //
+      // The replacement is built and works: real game-night footage, opening on
+      // the actual card being argued, made by yodm-podcast-kit/make-gamenight-clip.py.
+      // Three finished clips are in Downloads/_YODM-VIDEO-ALL/5-GAME-NIGHT-CLIPS.
+      // PUT THIS SLOT BACK once those are the library rather than the podcast
+      // clips — and the thirteen captions written against the old library are
+      // in yodm-tiktok-captions-BACKUP.json beside them, orphaned rather than
+      // deleted, so nothing was lost.
       { day: 2, time: "18:00", platform: "instagram" },
       { day: 4, time: "19:00", platform: "instagram" },
       { day: 6, time: "11:00", platform: "x" },
