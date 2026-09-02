@@ -41,7 +41,13 @@ function safeNext(raw: string | null): string {
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
-  const key = params.get("key") ?? params.get("secret");
+  // Trimmed, because this is the path a mail client touches. A wrapped line, a
+  // trailing newline picked up by a long-press "copy link", or a space on the
+  // end of a pasted URL all arrive here attached to the key — and the reply is
+  // "that link's key didn't match", which reads as a wrong key rather than a
+  // mangled link. The typed path (POST, below) and the cookie and header paths
+  // (`presentedKey` in lib/gate) already trim; this was the one that didn't.
+  const key = (params.get("key") ?? params.get("secret"))?.trim() || null;
   const next = safeNext(params.get("next"));
 
   if (!gateConfigured()) {
