@@ -73,6 +73,8 @@ interface ResolveInput {
   videos?: LibraryVideo[];
   /** The clip stored with the caption, which outranks a fresh rotation. */
   pinnedVideo?: PinnedVideo | null;
+  /** The still stored with the caption — a picture chosen, not derived. */
+  pinnedImage?: LibraryImage | null;
 }
 
 export function resolveArtwork(input: ResolveInput): Artwork {
@@ -117,7 +119,21 @@ function resolveStill({
   library,
   shareImages,
   platform,
+  pinnedImage,
 }: ResolveInput): Omit<Artwork, "kind"> {
+  /*
+   * A picture somebody chose for this post, which outranks every rule below —
+   * including the brand's own card renderer.
+   *
+   * Everything else here is a ranking of guesses: this page's share image, the
+   * library by hash, a generated card. A human looking at the post and picking
+   * the photograph is not a guess, and no automatic rule should be able to
+   * overrule it tomorrow.
+   */
+  if (pinnedImage) {
+    return { url: pinnedImage.url, source: "library", alt: topic.title };
+  }
+
   // Only when the site actually varies it per page — see the flag's own note.
   const pageImage =
     !brand.sitewideShareImage && topic.url ? shareImages.get(topic.url) : null;

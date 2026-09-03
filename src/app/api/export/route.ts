@@ -112,6 +112,7 @@ export async function GET(request: NextRequest) {
         platform: p.platform,
         videos: videos.get(p.brandSlug) ?? [],
         pinnedVideo: captions[p.id]?.video ?? null,
+        pinnedImage: captions[p.id]?.image ?? null,
       });
       if (artwork.kind === "video") {
         skippedVideo++;

@@ -110,6 +110,7 @@ async function resolvePost(id: string, origin: string) {
     platform: post.platform,
     videos,
     pinnedVideo: captions[id]?.video ?? null,
+    pinnedImage: captions[id]?.image ?? null,
   });
 
   return { brand, post, caption, artwork };

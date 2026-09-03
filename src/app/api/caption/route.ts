@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readCaptions, writeCaptions } from "@/lib/store";
 import { brandBySlug } from "@/lib/brands";
 import { pinnable, videosFor } from "@/lib/video-library";
+import { libraryFor } from "@/lib/library";
 import { PLATFORM_LIMIT } from "@/lib/compose";
 import { PLATFORM_PATTERN, type Platform } from "@/lib/types";
 
@@ -20,12 +21,21 @@ export const dynamic = "force-dynamic";
  * neither edit.
  *
  *   POST /api/caption
- *   { "id": "<slot id>", "caption": "the new words", "videoName"?: "13-emeka-moon" }
+ *   { "id": "<slot id>", "caption": "the new words",
+ *     "videoName"?: "13-emeka-moon", "imageName"?: "basketball-2" }
  *
  * `videoName` swaps which clip a Reel carries. On a Reel the clip is the post —
  * it is what a stranger sees before a word of the caption — and until now the
  * only way to change it was to regenerate the caption and hope the rotation
  * landed somewhere else.
+ *
+ * `imageName` does the same for a still. The clip has been swappable since
+ * Reels existed and the picture never was, which is what "change the image in
+ * this post" ran into on 3 September: every surface derived the still from the
+ * library by hash, so the only lever was renaming files — and that moves every
+ * other post on the same subject too. A named still is stored on the record and
+ * outranks every derivation, because a person who looked at the post and chose
+ * the photograph is not guessing.
  *
  * Everything else about the record is preserved — the topic it was written
  * from, the clip it was written against, when it was generated. Those are what
@@ -52,11 +62,13 @@ export async function POST(request: NextRequest) {
   let id = "";
   let caption = "";
   let videoName = "";
+  let imageName = "";
   try {
     const body = await request.json();
     id = String(body?.id ?? "").trim();
     caption = String(body?.caption ?? "");
     videoName = String(body?.videoName ?? "").trim();
+    imageName = String(body?.imageName ?? "").trim();
   } catch {
     return NextResponse.json({ error: "expected a JSON body" }, { status: 400 });
   }
@@ -112,11 +124,31 @@ export async function POST(request: NextRequest) {
       video = pinnable(match);
     }
 
+    // Same resolution rule as the clip, and for the same reason: a name that
+    // isn't in the library must be an error here, not a broken picture later.
+    let image = existing.image;
+    if (imageName) {
+      const slug = brandOf(id);
+      const brand = brandBySlug(slug);
+      if (!brand) {
+        return NextResponse.json({ error: `unknown brand: ${slug}` }, { status: 404 });
+      }
+      const match = (await libraryFor(slug)).find((v) => v.name === imageName);
+      if (!match) {
+        return NextResponse.json(
+          { error: `${brand.name} has no picture called "${imageName}"` },
+          { status: 404 },
+        );
+      }
+      image = { url: match.url, name: match.name };
+    }
+
     const written = await writeCaptions({
       [id]: {
         ...existing,
         caption,
         ...(video ? { video } : {}),
+        ...(image ? { image } : {}),
         editedAt: new Date().toISOString(),
       },
     });
@@ -125,7 +157,13 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { id, saved: true, length: caption.length, video: video?.name ?? null },
+      {
+        id,
+        saved: true,
+        length: caption.length,
+        video: video?.name ?? null,
+        image: image?.name ?? null,
+      },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

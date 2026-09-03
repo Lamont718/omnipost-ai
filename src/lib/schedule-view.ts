@@ -83,6 +83,7 @@ export async function buildSlotViews(start: Date, end: Date): Promise<SlotView[]
             platform: p.platform,
             videos: videos.get(p.brandSlug) ?? [],
             pinnedVideo: captions[p.id]?.video ?? null,
+            pinnedImage: captions[p.id]?.image ?? null,
           })
         : null;
 

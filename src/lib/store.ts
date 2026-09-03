@@ -1,6 +1,7 @@
 import { GenerateResponse } from "./types";
 import type { Topic } from "./sources";
 import type { PinnedVideo } from "./video-library";
+import type { LibraryImage } from "./library";
 
 /**
  * Where written captions live between generation and the calendar that shows them.
@@ -97,6 +98,19 @@ export interface StoredCaption extends GenerateResponse {
    * has no clips: those posts carry a still, exactly as before.
    */
   video?: PinnedVideo;
+  /**
+   * A still chosen by hand for this post, rather than picked by rotation.
+   *
+   * The clip has been swappable since Reels existed; the picture never was, and
+   * on 3 September that was the thing in the way: "change the image in this
+   * post look for one where its not the same uniform". Every surface derived
+   * the picture from the library by hash, so there was no way to say *this*
+   * one — the only lever was renaming files, which moves every other post too.
+   *
+   * Stored next to the caption for the same reason the topic and the clip are:
+   * a choice a human made must not be re-derived tomorrow.
+   */
+  image?: LibraryImage;
 }
 
 export type CaptionMap = Record<string, StoredCaption>;
