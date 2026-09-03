@@ -312,32 +312,70 @@ export const BRANDS: Brand[] = [
     artworkSays:
       "the card's question in large type, its category, and the YODM logo — a reader " +
       "has already read the question before reaching the first word of the caption",
+    /*
+     * The game-night clips, uploaded 2026-09-03. Real footage from a table
+     * playing YODM, each one opening on the card being argued — cut by
+     * yodm-podcast-kit/make-gamenight-clip.py, 1080x1920, 31s / 63s / 68s.
+     *
+     * The fourteen podcast clips are still in the same folder and still in the
+     * rotation for the untagged slots. They are not declared here, so they
+     * carry no description and no tags, which is the honest state: nobody has
+     * written down what is on them and they are not the game.
+     *
+     * `tags` are the card number, because that is the only word in a YODM topic
+     * URL — yodm.com/card/47 flattens to "...card47", so the tag "card/47" is
+     * the one thing that can match. It is what pairs the clip to the question
+     * it actually contains, on every slot, not just the TikTok one.
+     */
+    videoClips: [
+      {
+        name: "next-iconic-athlete",
+        describes:
+          "A game night: the SPORTS card 'Who's the next iconic athlete?' fills the screen, then a player at the table makes his case for a college kid nobody has seen yet",
+        tags: ["card/47"],
+      },
+      {
+        name: "one-night-stands",
+        describes:
+          "A game night: the FOR IT OR AGAINST IT card 'One Night Stands' fills the screen, then two players take opposite sides — one argues no strings, the other answers that you leave a piece of yourself behind",
+        tags: ["card/81"],
+      },
+      {
+        name: "oral-sex-relationship",
+        describes:
+          "A game night: the SEX & LIES card 'Is oral sex important in a relationship?' fills the screen, then the host takes it to a group at the table and they answer him together",
+        tags: ["card/23"],
+      },
+    ],
     schedule: [
-      // TikTok Tuesday 17:00 was added 2026-09-01 and REMOVED 2026-09-02, one
-      // day later, at Lamont's call. Worth keeping the reason, because the slot
-      // will come back.
-      //
-      // The slot itself was never the problem. The library behind it was:
-      // library/yodm/video/ holds fourteen clips cut from the PODCAST and from
-      // an ad, and every one carries burned-in captions about its own subject —
-      // sobriety, or EP98 fatherhood headlines. Paired with a debate card by
-      // rotation, a viewer read "Stop Being a Bum Dad" on screen while the
-      // caption asked about television. The worst pairing put "Is torture
-      // justified for national security?" over two men joking about drinking.
-      //
-      // His words: "we have to come very close to the actual game". None of
-      // those clips has the game in it, so no amount of better pairing would
-      // have fixed it. Tag matching cannot help here either — pickVideoForSlot
-      // matches tags against topic.url, and YODM's are yodm.com/card/65, a bare
-      // number with no words in it.
-      //
-      // The replacement is built and works: real game-night footage, opening on
-      // the actual card being argued, made by yodm-podcast-kit/make-gamenight-clip.py.
-      // Three finished clips are in Downloads/_YODM-VIDEO-ALL/5-GAME-NIGHT-CLIPS.
-      // PUT THIS SLOT BACK once those are the library rather than the podcast
-      // clips — and the thirteen captions written against the old library are
-      // in yodm-tiktok-captions-BACKUP.json beside them, orphaned rather than
-      // deleted, so nothing was lost.
+      /*
+       * TikTok Tuesday 17:00: added 2026-09-01, removed 2026-09-02, back on
+       * 2026-09-03. Worth the whole story, because it is a slot that looked
+       * fine and was not.
+       *
+       * The slot was never the problem. The library behind it was: fourteen
+       * clips cut from the PODCAST and from an ad, each carrying burned-in
+       * captions about its own subject. Paired with a debate card by rotation,
+       * a viewer read "Stop Being a Bum Dad" on screen while the caption asked
+       * about television, and one post put "Is torture justified for national
+       * security?" over two men joking about drinking. His words: "we have to
+       * come very close to the actual game".
+       *
+       * What brings it back is not a better pairing rule. It is three clips of
+       * the actual game, uploaded to library/yodm/video/ on 2026-09-03, each
+       * opening on the card being argued — and a topic pool of exactly the
+       * three cards they argue, so the footage picks the subject instead of
+       * being stapled to whatever the rotation reached. See `videoClips` and
+       * the `gamenight` source below.
+       *
+       * Three clips, one slot a week: the same card comes round every third
+       * week. That is the cost of a small library, and it is visible rather
+       * than hidden — the fix is more footage, not a longer rotation.
+       *
+       * The thirteen captions written against the old library are orphaned, not
+       * deleted, backed up in yodm-tiktok-captions-BACKUP.json.
+       */
+      { day: 2, time: "17:00", platform: "tiktok", topics: "gamenight" },
       { day: 2, time: "18:00", platform: "instagram" },
       { day: 4, time: "19:00", platform: "instagram" },
       { day: 6, time: "11:00", platform: "x" },
@@ -450,6 +488,24 @@ export const BRANDS: Brand[] = [
         sitemap: "https://yodm.com/sitemap.xml",
         include: [/\/card\/\d+$/i],
         exclude: BOILERPLATE,
+      },
+      {
+        /*
+         * The three cards there is game-night footage of, and nothing else.
+         *
+         * TikTok is video-only, and on a platform where the clip IS the post
+         * the clip has to choose the subject rather than the other way round.
+         * Left to the ordinary pool, the Tuesday slot would land on any of 92
+         * cards and the rotation would staple whichever clip came next to it —
+         * which is precisely the pairing that took this slot off the calendar
+         * on 2 September.
+         *
+         * So the pool is the footage. Add a clip, add its card here, and the
+         * slot has another week in it; until then it cycles these three.
+         */
+        sitemap: "https://yodm.com/sitemap.xml",
+        include: [/\/card\/(23|47|81)$/i],
+        tag: "gamenight",
       },
     ],
     evergreenTopics: [
