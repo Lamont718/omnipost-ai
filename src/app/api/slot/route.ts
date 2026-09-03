@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     const post = await composePost({
       brand,
-      topic: { title: topic.title, context: topic.context },
+      topic: { title: topic.title, context: topic.context, url: topic.url },
       platform,
       toneOverride: tone_override,
       examples: pickExamples(await loadExampleBank(), slug, platform),

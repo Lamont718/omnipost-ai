@@ -50,6 +50,38 @@ export interface TopicSource {
  */
 export type EvergreenTopic = string | { title: string; facts: string };
 
+/**
+ * Where a post sends the reader, and what they get when they arrive.
+ *
+ * Every caption this app had written before 3 September 2026 ended without one.
+ * Measured across the whole live calendar: 3 of 153 captions named a website at
+ * all, and not one of them told anybody where to buy the game. The writer was
+ * never asked for a destination, so it never wrote one — the posts were good
+ * and they went nowhere.
+ *
+ * `url` is the bare domain because that is the form a person can read out and
+ * type; the clickable `https://` version is derived where a link actually works
+ * (see `destinationLine` in lib/compose.ts). `action` is what the reader is
+ * being sent to DO, in the brand's own words — "buy the game", not "learn more",
+ * which is the phrase that makes a call to action sound like an advert.
+ */
+export interface Destination {
+  /**
+   * Tested against the topic's own URL. First match wins; an entry with no
+   * `match` is the brand's fallback and must come last.
+   *
+   * Emeka Explores is why this is a list rather than one field: a lesson post
+   * belongs on emekaexplores.com and a book post belongs on emekabooks.com,
+   * and sending a reader who wants the book to the lessons site is the same
+   * class of mistake as putting the Instagram handle on a TikTok post.
+   */
+  match?: RegExp;
+  /** Bare domain, no scheme — "yodm.com". */
+  url: string;
+  /** What they came to do: "buy the game", "read the lessons". */
+  action: string;
+}
+
 export interface Brand {
   slug: string;
   name: string;
@@ -211,6 +243,11 @@ export interface Brand {
    * This is the whole "when do I post" model. The number of entries is how many
    * posts a week; edit these to change your cadence.
    */
+  /**
+   * Where this brand's posts send people. Unset means the caption ends without
+   * a destination, which is what every brand did until 3 September 2026.
+   */
+  destinations?: Destination[];
   schedule: PostSlot[];
   voice: VoiceProfile;
   /**
@@ -405,6 +442,9 @@ export const BRANDS: Brand[] = [
     // on it.
     //
     // 92 cards also means a topic never repeats within a month.
+    // yodm.com is the shop as well as the cards, so one destination covers
+    // both the card a post is about and the game it is selling.
+    destinations: [{ url: "yodm.com", action: "buy the game" }],
     sources: [
       {
         sitemap: "https://yodm.com/sitemap.xml",
@@ -664,6 +704,12 @@ export const BRANDS: Brand[] = [
         tags: ["writing", "practice", "homework", "school", "letters", "words"],
       },
     ],
+    destinations: [
+      // A book post sends people to the book site. Same rule as the handles:
+      // the right domain for the wrong subject reads as correct and isn't.
+      { match: /emekabooks\.com/i, url: "emekabooks.com", action: "get the book" },
+      { url: "emekaexplores.com", action: "read the lessons" },
+    ],
     sources: [
       {
         sitemap: "https://www.emekaexplores.com/sitemap.xml",
@@ -757,6 +803,7 @@ export const BRANDS: Brand[] = [
     // month, so nothing repeats.
     //
     // Worth revisiting if those page types ever get their own artwork.
+    destinations: [{ url: "mosthatednba.com", action: "read the rest" }],
     sources: [
       {
         sitemap: "https://www.mosthatednba.com/sitemap.xml",
@@ -838,6 +885,10 @@ export const BRANDS: Brand[] = [
     // ⚠️ Point at the child sitemap, not /sitemap.xml: GoDaddy serves a
     // <sitemapindex> there and parseSitemap only reads <url> entries, so the
     // index yields nothing at all. sitemap.ols.xml is the online store.
+    // The nonprofit's public site. "Find the programme" and not "donate":
+    // nothing on communitynyc.org asks for money, and a caption must not send
+    // people somewhere to do a thing the page does not offer.
+    destinations: [{ url: "communitynyc.org", action: "find the programme" }],
     sources: [
       {
         sitemap: "https://communitynyc.org/sitemap.website.xml",

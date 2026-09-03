@@ -18,6 +18,9 @@ export const dynamic = "force-dynamic";
  *
  *   POST /api/generate
  *   { "brand": "yodm", "topic": "...", "platform": "x", "tone_override": "..." }
+ *
+ * `url` is optional: the page this is about, which picks the destination the
+ * caption ends on when a brand has more than one (see lib/compose.ts).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -53,7 +56,7 @@ export async function POST(request: NextRequest) {
       brand,
       // `context` is optional verified copy; without it the model is barred
       // from inventing specifics. See the grounding rule in lib/compose.ts.
-      topic: { title: topic, context: body.context },
+      topic: { title: topic, context: body.context, url: body.url },
       platform,
       toneOverride: tone_override,
     });

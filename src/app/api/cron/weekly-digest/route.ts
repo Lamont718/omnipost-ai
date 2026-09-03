@@ -201,7 +201,7 @@ export async function GET(request: Request) {
             }
             const post = await composePost({
               brand,
-              topic: { title: slot.topic.title, context: slot.topic.context },
+              topic: { title: slot.topic.title, context: slot.topic.context, url: slot.topic.url },
               platform: slot.platform,
               examples: pickExamples(exampleBank, slot.brandSlug, slot.platform),
               // Against what is already stored plus what this run has written

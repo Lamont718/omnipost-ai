@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { Brand, withoutSitewideCopy } from "./brands";
+import { Brand, Destination, withoutSitewideCopy } from "./brands";
 import { Platform, VoiceProfile, GenerateResponse } from "./types";
 import { Budget, BudgetExceededError } from "./spend";
 
@@ -128,11 +128,55 @@ const PHRASE_RETRIES = 2;
 const HOOK_TARGET = 125;
 const HOOK_TRIGGER = 180;
 
+/**
+ * Where this post sends the reader, and how to say it on this platform.
+ *
+ * Two things vary and both matter. Which destination — a book post goes to the
+ * book site, not the lessons site — and whether a link is clickable where the
+ * post lands. On X a bare URL is a link; in an Instagram or TikTok caption it
+ * is dead text, so a caption that pastes one there is asking people to retype
+ * a URL they cannot select. The domain spoken inside a sentence is the form
+ * that works on those two, which is why `Destination.url` is stored bare.
+ *
+ * Returns "" for a brand with no destination, so nothing is invented for one
+ * that has no site to send anybody to.
+ */
+function destinationFor(brand: Brand, topicUrl?: string): Destination | undefined {
+  const list = brand.destinations ?? [];
+  return (
+    (topicUrl ? list.find((d) => d.match && d.match.test(topicUrl)) : undefined) ??
+    list.find((d) => !d.match)
+  );
+}
+
+function destinationRule(pick: Destination | undefined, platform: Platform): string {
+  if (!pick) return "";
+
+  const how =
+    platform === "instagram"
+      ? `Instagram captions do not make links clickable, so the domain goes inside your closing sentence as words — "${pick.url}" — with no "https://", no "click" and no "link in bio".`
+      : platform === "tiktok"
+        ? `A TikTok caption does not make links clickable and has almost no room. Put "${pick.url}" at the end of your one or two lines, on its own, with no sentence around it and no "https://".`
+        : `A link IS clickable here, so name what is there in the closing line and put https://${pick.url} on its own line under it, before the hashtags.`;
+
+  return `
+WHERE THIS POST SENDS PEOPLE (required — a post that names no destination is not finished):
+The last beat of this caption tells the reader they can ${pick.action} at ${pick.url}.
+Say what is waiting there in your own words. A bare domain stuck on the end is an
+address, not an invitation — the reader has to know what they get for going.
+${how}
+Say it once, in the brand's voice, at the end. Never open with it, never repeat
+it, and never let it become the post — it is the last beat, after the caption
+has already earned it.`;
+}
+
 function buildSystemPrompt(
   brandName: string,
   voice: VoiceProfile,
   platform: Platform,
   media?: PostMedia,
+  /** Already resolved against this post's topic — see `destinationRule`. */
+  destination = "",
 ): string {
   return `You are the social media voice for ${brandName}. You write authentic, purpose-driven social media content.
 
@@ -176,6 +220,8 @@ ${voice.house_rules.map((rule, i) => `${i + 1}. ${rule}`).join("\n")}
 `
     : ""
 }
+${destination}
+
 FACTUAL GROUNDING (the most important rule here):
 The VERIFIED FACTS block in the user message is the only place you may take
 specifics from. Prices, counts, dates, names, features, category lists, product
@@ -314,7 +360,12 @@ function parseReply(text: string, voice: VoiceProfile): GenerateResponse {
 export async function composePost(opts: {
   brand: Brand;
   /** What to write about. `context` is verified page copy — see the grounding rule. */
-  topic: { title: string; context?: string };
+  topic: {
+    title: string;
+    context?: string;
+    /** The page itself, when there is one — picks which destination applies. */
+    url?: string;
+  };
   platform: Platform;
   toneOverride?: string;
   /**
@@ -377,7 +428,14 @@ export async function composePost(opts: {
     postDate,
     recentOpenings,
   } = opts;
-  const system = buildSystemPrompt(brand.name, brand.voice, platform, media);
+  const destination = destinationFor(brand, topic.url);
+  const system = buildSystemPrompt(
+    brand.name,
+    brand.voice,
+    platform,
+    media,
+    destinationRule(destination, platform),
+  );
 
   const parts = [`Write a ${platform} post about: ${topic.title}`];
   // Stripped here as well as in lib/sources.ts, because a caption record keeps
@@ -647,6 +705,40 @@ ${media.describes}
     console.log(
       `compose: ${brand.slug} ${platform} banned phrases ${banned.length} -> ${hits.length}` +
         (hits.length ? ` (still: ${hits.join(", ")})` : ""),
+    );
+  }
+
+  /*
+   * The destination pass. Same shape as the three above, same reason: asking is
+   * not checking, and this is the one a reader notices by its absence rather
+   * than its presence. Measured on the live calendar the day this was written,
+   * 3 of 153 captions named a website and none of them named a way to buy the
+   * game — every one of those posts was asking people to go somewhere and not
+   * saying where.
+   *
+   * Substring, not a URL parse: the domain is meant to be readable words in a
+   * sentence on Instagram and a link on X, and both forms contain it.
+   */
+  if (destination && !best.caption.toLowerCase().includes(destination.url.toLowerCase())) {
+    messages.push(
+      { role: "assistant", content: JSON.stringify(best) },
+      {
+        role: "user",
+        content:
+          `That caption never says where to go. It has to end by pointing the reader at ` +
+          `${destination.url}, where they can ${destination.action}. Add that as the last beat ` +
+          `— say what is waiting there, not just the address — and keep everything else: the ` +
+          `same subject, every verified fact, the hashtags at the end. ` +
+          (limit ? `Stay under ${limit} characters including hashtags. ` : "") +
+          `Reply with the same JSON shape.`,
+      },
+    );
+    const retry = await generate(system, messages, brand.voice, budget);
+    const landed = retry.caption.toLowerCase().includes(destination.url.toLowerCase());
+    if (landed && (!limit || retry.caption.length <= limit)) best = retry;
+    console.log(
+      `compose: ${brand.slug} ${platform} — destination ${destination.url} ` +
+        (landed ? "added on retry" : "STILL MISSING"),
     );
   }
 

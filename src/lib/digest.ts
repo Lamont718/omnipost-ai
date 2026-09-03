@@ -47,7 +47,7 @@ async function buildBrand(brand: Brand, now: Date): Promise<DigestBrand> {
       const platform = brand.schedule[i % brand.schedule.length].platform;
       const post = await composePost({
         brand,
-        topic: { title: topics[i].title, context: topics[i].context },
+        topic: { title: topics[i].title, context: topics[i].context, url: topics[i].url },
         platform,
       });
       posts.push({ platform, topic: topics[i], post });
