@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { scheduledPostsInRange } from "@/lib/schedule";
 import { brandBySlug } from "@/lib/brands";
+import { PLATFORMS } from "@/lib/types";
 import { composePost } from "@/lib/compose";
 import {
   compactCaptions,
@@ -37,6 +38,7 @@ export const maxDuration = 300;
  *   Fill the week now:   GET /api/cron/weekly-digest?secret=$CRON_SECRET
  *   Preview, no writes:  …&preview=1
  *   One brand only:      …&brand=yodm
+ *   One platform only:   …&platform=tiktok
  *   N days ahead:        …&days=14
  *   From a given day:    …&start=2026-09-06&days=28
  *   Raise the cap:       …&budget=10        (dollars; default 5)
@@ -80,6 +82,17 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const preview = params.get("preview");
   const onlyBrand = params.get("brand");
+  /*
+   * One platform only.
+   *
+   * Added 2026-09-03, when YODM went back onto TikTok. Restoring a slot brings
+   * back every caption ever written for it — the ids are brand:date:time:platform
+   * and nothing was deleted — so nine posts returned still pinned to the podcast
+   * clips and the cards the old rotation had given them, which is exactly what
+   * the slot came off for. Fixing that needs `force`, and forcing a whole brand
+   * would have rewritten thirty-three Instagram and X posts nobody asked about.
+   */
+  const onlyPlatform = params.get("platform");
   const days = Math.min(Math.max(Number(params.get("days")) || 7, 1), 31);
 
   const startParam = params.get("start");
@@ -105,6 +118,18 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: `Unknown brand: ${onlyBrand}` }, { status: 400 });
       }
       slots = slots.filter((s) => s.brandSlug === onlyBrand);
+    }
+
+    if (onlyPlatform) {
+      // Same guard as the brand filter above, for the same reason: a platform
+      // that matches nothing must say so rather than report a clean run.
+      if (!(PLATFORMS as readonly string[]).includes(onlyPlatform)) {
+        return NextResponse.json(
+          { error: `platform must be one of: ${PLATFORMS.join(", ")}` },
+          { status: 400 },
+        );
+      }
+      slots = slots.filter((s) => s.platform === onlyPlatform);
     }
 
     // Don't pay to rewrite what already exists. Every run used to regenerate
