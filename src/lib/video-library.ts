@@ -219,6 +219,27 @@ export function pickVideoForSlot(
     if (tagged.length > 0) return tagged[index % tagged.length];
   }
 
+  /*
+   * No clip is about this subject, and this brand has said that means no clip.
+   *
+   * The rotation fallback below is right for a brand whose clips are ABOUT the
+   * brand — Emeka waving, Emeka reading — where any clip suits any lesson. It
+   * is wrong for a brand whose clips are each about one specific thing. YODM's
+   * three game-night clips open on the card being argued, so rotating one onto
+   * a different card puts a question on screen that the caption is not asking.
+   *
+   * That is not hypothetical: it is how fourteen podcast clips came to sit
+   * under twenty-eight debate cards, and why the TikTok slot was pulled on 2
+   * September. Lamont's call on 3 September, once the game clips existed: "only
+   * use the clips that was made yesterday." A brand set this way gets footage
+   * when the footage is about the post, and its card graphic the rest of the
+   * time — never a clip about something else.
+   *
+   * The slot id carries the brand slug, so no caller has to know the rule.
+   */
+  const slug = slotId.match(/^([a-z0-9-]+):/)?.[1];
+  if (slug && brandBySlug(slug)?.clipsMustMatchSubject) return null;
+
   return videos[index % videos.length];
 }
 

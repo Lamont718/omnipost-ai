@@ -161,6 +161,22 @@ export interface Brand {
    */
   videoClips?: VideoClipMeta[];
   /**
+   * This brand's clips are each about one specific thing, so a clip is only
+   * ever attached to a post about that same thing.
+   *
+   * Set for YODM, whose game-night footage opens on the card being argued.
+   * Without it the rotation hands a post whatever clip comes next, which is how
+   * "Is torture justified for national security?" ended up over two men joking
+   * about drinking. With it, a YODM post carries footage of its own card or the
+   * card graphic — see `pickVideoForSlot`.
+   *
+   * Leave unset for a brand whose clips are about the brand rather than a
+   * subject: any Emeka clip suits any lesson, and switching this on there would
+   * cost 28 Reels to gain nothing.
+   */
+  clipsMustMatchSubject?: boolean;
+
+  /**
    * True when the site publishes ONE og:image for every page, so it says
    * nothing about the topic and must never be attached to a post.
    *
@@ -327,6 +343,7 @@ export const BRANDS: Brand[] = [
      * the one thing that can match. It is what pairs the clip to the question
      * it actually contains, on every slot, not just the TikTok one.
      */
+    clipsMustMatchSubject: true,
     videoClips: [
       {
         name: "next-iconic-athlete",
