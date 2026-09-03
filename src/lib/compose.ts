@@ -157,7 +157,7 @@ function destinationRule(pick: Destination | undefined, platform: Platform): str
       ? `Instagram captions do not make links clickable, so the domain goes inside your closing sentence as words — "${pick.url}" — with no "https://", no "click" and no "link in bio".`
       : platform === "tiktok"
         ? `A TikTok caption does not make links clickable and has almost no room. Put "${pick.url}" at the end of your one or two lines, on its own, with no sentence around it and no "https://".`
-        : `A link IS clickable here, so name what is there in the closing line and put https://${pick.url} on its own line under it, before the hashtags.`;
+        : `A link IS clickable here. Say what is waiting there WITHOUT typing the address into the sentence, then put https://${pick.url} on its own line under it, before the hashtags. The address appears exactly once, as the link — "the fight's waiting at ${pick.url}" followed by the link says it twice.`;
 
   return `
 WHERE THIS POST SENDS PEOPLE (required — a post that names no destination is not finished):
