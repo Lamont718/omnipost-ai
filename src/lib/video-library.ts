@@ -184,6 +184,28 @@ function rotationIndex(slotId: string): number {
     }
   }
 
+  return hashOf(slotId);
+}
+
+/*
+ * The slot ids that reach the line above are not arbitrary strings: they are
+ * dates exactly `poolSize` weeks apart, differing in two or three digits. A
+ * `hash * 31 + charCode` rolling hash barely moves its low bits across inputs
+ * that similar, and it is only the low bits the modulo reads — over three
+ * years of the Tuesday slot that gave trust-forgive one airing and trust-hell-no
+ * seven, out of the same four-clip group. This is a standard 32-bit avalanche
+ * (two xorshift-multiply rounds); it does not make the choice a rotation, it
+ * makes an unlucky group stop being unlucky.
+ */
+function spread(n: number): number {
+  let x = n | 0;
+  x = Math.imul(x ^ (x >>> 16), 0x7feb352d);
+  x = Math.imul(x ^ (x >>> 15), 0x846ca68b);
+  return (x ^ (x >>> 16)) >>> 0;
+}
+
+/** Stable, well-spread integer for a slot id. */
+function hashOf(slotId: string): number {
   let hash = 0;
   for (let i = 0; i < slotId.length; i++) hash = (hash * 31 + slotId.charCodeAt(i)) | 0;
   return Math.abs(hash);
@@ -191,6 +213,31 @@ function rotationIndex(slotId: string): number {
 
 function flatten(hint: string): string {
   return hint.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Does this tag apply to this hint?
+ *
+ * A plain substring test, with one guard: a tag that ends in a digit must not
+ * be followed by another digit in the hint. Without it the tag "card/7" —
+ * flattened to "card7" — matches yodm.com/card/70 through /card/79, and the
+ * game-night clip of somebody arguing "would you break the law" gets stapled
+ * to a completely different card. That is the exact failure this brand's
+ * `clipsMustMatchSubject` was added to stop, so the tag matcher must not
+ * reintroduce it one digit at a time. Single-digit deck cards only became
+ * reachable on 8 Sep 2026, when card 7 got footage.
+ */
+function tagMatches(flatHint: string, tag: string): boolean {
+  const flatTag = flatten(tag);
+  if (flatTag.length < 4) return false;
+  const endsInDigit = /[0-9]$/.test(flatTag);
+  let at = flatHint.indexOf(flatTag);
+  while (at !== -1) {
+    const next = flatHint[at + flatTag.length];
+    if (!endsInDigit || next === undefined || !/[0-9]/.test(next)) return true;
+    at = flatHint.indexOf(flatTag, at + 1);
+  }
+  return false;
 }
 
 /**
@@ -214,9 +261,29 @@ export function pickVideoForSlot(
   if (hint) {
     const flat = flatten(hint);
     const tagged = videos.filter((v) =>
-      (v.tags ?? []).some((t) => t.length >= 4 && flat.includes(flatten(t))),
+      (v.tags ?? []).some((t) => tagMatches(flat, t)),
     );
-    if (tagged.length > 0) return tagged[index % tagged.length];
+    /*
+     * Which one, when several clips are about the same subject.
+     *
+     * NOT `index`. `rotationIndex` returns weeks * slotsInTheWeek + position,
+     * so between two weeks it steps by the number of slots the brand has — and
+     * a topic only comes back round every `poolSize` weeks, so between two
+     * appearances of one subject it steps by poolSize * slots. Both are
+     * frequently multiples of the group size, and then the modulo is constant
+     * and every clip but one is UNREACHABLE. Measured on YODM: four clips argue
+     * the broken-trust question, its topic returns every 8 weeks, the brand has
+     * 4 slots — 8 * 4 mod 4 = 0, so trust-forgive posted every time and the
+     * other three never posted at all. This is the same failure `weekStep` in
+     * sources.ts documents for topics, one level down.
+     *
+     * A hash of the slot id has no period to collide with: the date is in it,
+     * so it moves on every occurrence, and it is stable for a given date so the
+     * preview and the post agree. It is not a round-robin — the same clip can
+     * come up twice in a row — but every clip is reachable, which the strict
+     * rotation was not.
+     */
+    if (tagged.length > 0) return tagged[spread(hashOf(slotId)) % tagged.length];
   }
 
   /*

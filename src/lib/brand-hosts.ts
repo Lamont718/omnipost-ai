@@ -12,6 +12,9 @@ export function allowedHosts(): Set<string> {
   const hosts = new Set<string>();
   for (const brand of BRANDS) {
     for (const source of brand.sources) {
+      // A source can be a hand-written topic list with no sitemap; it fetches
+      // nothing, so it puts no host on the allowlist.
+      if (!source.sitemap) continue;
       try {
         const host = new URL(source.sitemap).hostname.toLowerCase();
         hosts.add(host);
