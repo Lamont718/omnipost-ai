@@ -12,10 +12,33 @@ import type { VideoClipMeta } from "./video-library";
  * delete it, or you lose the voice profile you tuned.
  */
 
+/**
+ * A topic that has no page anywhere, declared by hand.
+ *
+ * `facts` is verified canon the writer is then allowed to quote — same contract
+ * as an evergreen's `facts` and as a page's meta description. It must be
+ * something somebody actually said or something actually on screen, never a
+ * summary invented to fill the field.
+ */
+export interface LiteralTopic {
+  title: string;
+  facts: string;
+}
+
 /** Where a brand's post topics come from. */
 export interface TopicSource {
-  /** Absolute URL of a sitemap.xml. */
-  sitemap: string;
+  /**
+   * Absolute URL of a sitemap.xml. Optional — a source may instead be a hand
+   * written list of `topics`, for subjects the site has no page for.
+   */
+  sitemap?: string;
+  /**
+   * Topics with no page behind them. Added for YODM's game-night footage: the
+   * deck is 92 cards and most of what they argued on the 2021 tape is not in
+   * it, so there is no yodm.com URL to draw those questions from. A source may
+   * carry a sitemap, a topic list, or both.
+   */
+  topics?: LiteralTopic[];
   /** If set, only paths matching one of these are eligible. */
   include?: RegExp[];
   /** Paths matching any of these are skipped, even if `include` matched. */
@@ -329,19 +352,36 @@ export const BRANDS: Brand[] = [
       "the card's question in large type, its category, and the YODM logo — a reader " +
       "has already read the question before reaching the first word of the caption",
     /*
-     * The game-night clips, uploaded 2026-09-03. Real footage from a table
-     * playing YODM, each one opening on the card being argued — cut by
-     * yodm-podcast-kit/make-gamenight-clip.py, 1080x1920, 31s / 63s / 68s.
+     * The game-night clips. Real footage from a table playing YODM, each one
+     * opening on the card being argued, 1080x1920.
+     *
+     * Three uploaded 2026-09-03 from make-gamenight-clip.py. Eleven more on
+     * 2026-09-08, cut from the December 2021 tape by batch-2021.py in the
+     * card-frame format — the argument plays inside the card's own photo
+     * window, so the question stays on screen for the whole clip rather than
+     * only the first 2.5 seconds.
+     *
+     * A twelfth, law-robbing-my-mother, is deliberately NOT here and not
+     * uploaded. Three transcription passes disagreed about whether the man
+     * says "you steal my family" or "you're still my family", and the captions
+     * are burned in. It stays out of the calendar until Lamont has heard it.
+     *
+     * ⚠ Every one of the eleven is from a Christmas game night — stockings on
+     * the mantel and garland on the table, in shot, in all of them.
      *
      * The fourteen podcast clips are still in the same folder and still in the
      * rotation for the untagged slots. They are not declared here, so they
      * carry no description and no tags, which is the honest state: nobody has
      * written down what is on them and they are not the game.
      *
-     * `tags` are the card number, because that is the only word in a YODM topic
-     * URL — yodm.com/card/47 flattens to "...card47", so the tag "card/47" is
-     * the one thing that can match. It is what pairs the clip to the question
-     * it actually contains, on every slot, not just the TikTok one.
+     * `tags` are the card number where the question IS a deck card, because
+     * that is the only word in a YODM topic URL — yodm.com/card/47 flattens to
+     * "...card47", so the tag "card/47" is the one thing that can match.
+     *
+     * Eight of the new clips argue questions that are NOT in the 92-card deck.
+     * They have no card and no page, so they are tagged on a word out of the
+     * declared topic's title instead — see the `topics` list on the gamenight
+     * source below, and `Topic.title` being the hint when there is no URL.
      */
     clipsMustMatchSubject: true,
     videoClips: [
@@ -362,6 +402,84 @@ export const BRANDS: Brand[] = [
         describes:
           "A game night: the SEX & LIES card 'Is oral sex important in a relationship?' fills the screen, then the host takes it to a group at the table and they answer him together",
         tags: ["card/23"],
+      },
+
+      // --- Deck cards. Added 2026-09-08, from the December 2021 tape. ---
+      {
+        name: "wnba-pay",
+        describes:
+          "A game night: the SPORTS card 'Should athletes in the WNBA get as much pay as those in the NBA?' is on screen while a woman at the table argues yes — they bring the fans in, they sacrifice their bodies, so they should get the same as the men",
+        tags: ["card/53"],
+      },
+      {
+        name: "law-break-the-law",
+        describes:
+          "A game night: the SOCIAL MATTERS card 'Would you break the law to help a loved one?' is on screen while a woman says she would break it without hesitation — she will not support any system that brings her brother, her husband or her children down",
+        tags: ["card/7"],
+      },
+      {
+        name: "law-not-going-to-jail",
+        describes:
+          "A game night: the SOCIAL MATTERS card 'Would you break the law to help a loved one?' is on screen while a man challenges the last answer — the priority is the family, and going to jail for what someone else did destroys it, so he buys them the best lawyer instead",
+        tags: ["card/7"],
+      },
+
+      /*
+       * --- GAME NIGHT questions. Not in the deck, so not on any card page. ---
+       *
+       * Tagged on a word out of the declared topic's own title, which is what
+       * `pickVideoForSlot` is handed when a topic has no URL. The words are
+       * chosen to be in one title and no other: "homeschooling" is in the
+       * schooling question and nowhere else, and so on. Four or more characters
+       * — a shorter tag matches half a sitemap.
+       */
+      {
+        name: "trust-hell-no",
+        describes:
+          "A game night: the GAME NIGHT card 'When the trust is broken in a relationship, can you ever truly get it back?' is on screen while a woman answers hell no — even if they say they trust you again they will always question whatever you do",
+        tags: ["trust is broken"],
+      },
+      {
+        name: "trust-heal-over-time",
+        describes:
+          "A game night: the same broken-trust card is on screen while a woman argues all things heal over time — both people have faults, and you get the trust back by leaving the phone and the pocketbook lying around",
+        tags: ["trust is broken"],
+      },
+      {
+        name: "trust-therapy",
+        describes:
+          "A game night: the same broken-trust card is on screen while a man agrees you can go to therapy and work on it, but says you will never get it back the way it once was",
+        tags: ["trust is broken"],
+      },
+      {
+        name: "trust-forgive",
+        describes:
+          "A game night: the same broken-trust card is on screen while a woman argues that if you truly forgive someone and they have truly changed, you can trust them again and grow together",
+        tags: ["trust is broken"],
+      },
+      {
+        name: "submissive-depends",
+        describes:
+          "A game night: the GAME NIGHT card 'Does being submissive to your partner make you weak?' is on screen while a man says it depends on the relationship — you can never tell a couple how to be with each other",
+        tags: ["submissive"],
+      },
+      {
+        name: "submissive-vulnerability",
+        describes:
+          "A game night: the same submissive card is on screen while a man answers yes, it makes him weak, and says he wants her to see his vulnerability and that they are partners",
+        tags: ["submissive"],
+      },
+      {
+        name: "school-african-studies",
+        describes:
+          "A game night: the GAME NIGHT card 'Is traditional schooling better than homeschooling?' is on screen while a woman argues for homeschooling — at home you can teach your kids African studies, which school does not show them",
+        tags: ["homeschooling"],
+      },
+      {
+        name: "school-third-world",
+        describes:
+          "A game night: the same schooling card is on screen while a woman who homeschooled her own children to fifth grade calls the United States education system the equivalent of a third world country, and says homeschoolers do far better in college",
+        tags: ["homeschooling"],
       },
     ],
     schedule: [
@@ -508,7 +626,8 @@ export const BRANDS: Brand[] = [
       },
       {
         /*
-         * The three cards there is game-night footage of, and nothing else.
+         * The cards and questions there is game-night footage of, and nothing
+         * else.
          *
          * TikTok is video-only, and on a platform where the clip IS the post
          * the clip has to choose the subject rather than the other way round.
@@ -517,11 +636,47 @@ export const BRANDS: Brand[] = [
          * which is precisely the pairing that took this slot off the calendar
          * on 2 September.
          *
-         * So the pool is the footage. Add a clip, add its card here, and the
-         * slot has another week in it; until then it cycles these three.
+         * So the pool is the footage. On 3 Sep that was three clips on three
+         * cards, and the note here said the fix was more footage, not a longer
+         * rotation. The footage arrived on 8 Sep: eleven more clips off the
+         * December 2021 tape.
+         *
+         * Cards 7 and 53 are the two the tape argues word for word, so they
+         * join the sitemap filter. NOTE the digit boundary in `tagMatches` —
+         * card 7 is the first single-digit card with footage, and "card7" is a
+         * substring of card/70 through card/79.
          */
         sitemap: "https://yodm.com/sitemap.xml",
-        include: [/\/card\/(23|47|81)$/i],
+        include: [/\/card\/(7|23|47|53|81)$/i],
+        /*
+         * The other eight clips argue three questions that are not in the deck.
+         * There is no yodm.com page for them and there never will be, so they
+         * are declared here. `facts` is what is actually said on the tape —
+         * read off the burned-in transcripts, not summarised from memory — so
+         * the writer has something true to quote instead of the rules of the
+         * game, which is what it recites when it is given nothing.
+         *
+         * The title is also the pairing key: with no URL, `pickVideoForSlot` is
+         * handed the title, and the clips are tagged on a word inside it.
+         */
+        topics: [
+          {
+            title:
+              "When the trust is broken in a relationship, can you ever truly get it back?",
+            facts:
+              "Argued at a 2021 game night, four ways. One woman: hell no — even if they say they trust you again, they will always question whatever you do. Another: all things heal over time, both people have faults, and you rebuild it by leaving the phone and the pocketbook lying around. A man: you can go to therapy and work on it, but you will never get it back like it once was. A fourth: if you truly forgive someone and they have truly changed, you can grow together. Not one of the 92 cards — a question from the night, on a GAME NIGHT card.",
+          },
+          {
+            title: "Does being submissive to your partner make you weak?",
+            facts:
+              "Argued at a 2021 game night. One man: it depends on the relationship — it only makes you weak if you portray yourself one way and then act another, and you can never tell a couple how to be with each other. Another man: yes, it makes him weak, and he wants her to see his vulnerability, that he needs her shelter, that they are partners. Not one of the 92 cards — a question from the night, on a GAME NIGHT card.",
+          },
+          {
+            title: "Is traditional schooling better than homeschooling?",
+            facts:
+              "Argued at a 2021 game night. One woman for homeschooling: the curriculum you grew up on turns out not to be the truth, and at home you can teach your kids African studies, which school does not show them. Another, who homeschooled her own children until fifth grade, calls the United States education system the equivalent of a third world country, says you can teach a child the way that child learns rather than systematically, and that homeschoolers do far better in college. Not one of the 92 cards — a question from the night, on a GAME NIGHT card.",
+          },
+        ],
         tag: "gamenight",
       },
     ],

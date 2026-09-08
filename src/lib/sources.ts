@@ -1,6 +1,7 @@
 import {
   Brand,
   EvergreenTopic,
+  LiteralTopic,
   TopicSource,
   withoutSitewideCopy,
 } from "./brands";
@@ -40,10 +41,18 @@ export interface Topic {
 }
 
 interface SitemapEntry {
+  /**
+   * The page this entry is, or a synthetic `literal:` key for a declared topic
+   * that has no page. Only ever used as an identity for freshness and rotation
+   * — a literal entry never reaches `fetchPageMeta` and never becomes a
+   * `Topic.url`.
+   */
   url: string;
   lastmod?: Date;
   /** From the source this entry came out of. */
   pageImageWins?: boolean;
+  /** Set when this came from `TopicSource.topics` rather than a sitemap. */
+  literal?: LiteralTopic;
 }
 
 const FETCH_TIMEOUT_MS = 15_000;
@@ -121,11 +130,28 @@ function matchesSource(url: string, source: TopicSource): boolean {
 }
 
 async function candidatesFor(source: TopicSource): Promise<SitemapEntry[]> {
+  /*
+   * A source can be a list of declared topics instead of a sitemap. See
+   * `TopicSource.topics`: eight of YODM's game-night clips argue questions that
+   * are not in the 92-card deck, so there is no yodm.com/card/N page to draw
+   * them from and no sitemap that will ever contain them. They still have to be
+   * postable, because the footage exists and the question is on screen.
+   *
+   * They carry no lastmod, so they are never "fresh" and never crowd out a real
+   * page — they sit in the back catalogue and come round on the rotation.
+   */
+  const literals: SitemapEntry[] = (source.topics ?? []).map((t) => ({
+    url: "literal:" + t.title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    literal: t,
+  }));
+  if (!source.sitemap) return literals;
+
   const xml = await fetchText(source.sitemap);
-  if (!xml) return [];
-  return parseSitemap(xml)
+  if (!xml) return literals;
+  const pages = parseSitemap(xml)
     .filter((e) => matchesSource(e.url, source))
     .map((e) => (source.pageImageWins ? { ...e, pageImageWins: true } : e));
+  return [...pages, ...literals];
 }
 
 /**
@@ -307,6 +333,17 @@ async function topicsFromPool(
   // In parallel: these were serial, and a slow page held up the whole week.
   return Promise.all(
     picked.map(async (entry) => {
+      // A declared topic has no page to read, and its facts were written down
+      // rather than fetched. Marked "evergreen" because that is what it is to
+      // everything downstream: a topic with no URL. The destination falls back
+      // to the brand's own, which is right — there is nowhere else to send.
+      if (entry.literal) {
+        return {
+          title: entry.literal.title,
+          context: entry.literal.facts,
+          source: "evergreen" as const,
+        };
+      }
       const meta = await fetchPageMeta(entry.url);
       return {
         url: entry.url,
