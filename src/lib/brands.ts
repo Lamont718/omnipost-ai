@@ -394,7 +394,7 @@ export const BRANDS: Brand[] = [
       {
         name: "one-night-stands",
         describes:
-          "A game night: the FOR IT OR AGAINST IT card 'One Night Stands' is on screen while two players take opposite sides — one argues no strings and no expectations, the other answers that every time you give yourself away you leave a piece of yourself behind",
+          "A game night: the FOR IT OR AGAINST IT card 'One Night Stands' is on screen while two players take opposite sides in under thirty seconds — one argues it is easy, no commitment and no expectations, the other comes straight back that your body is your temple",
         tags: ["card/81"],
       },
       {
@@ -403,6 +403,16 @@ export const BRANDS: Brand[] = [
           "A game night: the SEX & LIES card 'Is oral sex important in a relationship?' is on screen while the host takes it to a group at the table and they answer him together",
         tags: ["card/23"],
       },
+
+      // ⚠️ one-night-stands was also CUT TO 29s on 2026-09-08 — his call, it
+      // was 66. The cut joins the strongest FOR beat to the strongest AGAINST
+      // beat and drops the middle, because the card says FOR IT OR AGAINST IT
+      // and any single 30-second window held one side and a fragment of the
+      // other. Its describes changed with it: the old one quoted "you leave a
+      // piece of yourself behind", which is at 0:46 of a clip that now ends at
+      // 0:29. ★★ A describes is written from the clip, and it has to be
+      // REWRITTEN when the clip is recut, or the caption writer is working from
+      // footage that no longer exists.
 
       // ⚠️ The three above were REBUILT IN THE CARD FRAME on 2026-09-08. They
       // had shipped in the old format — blurred fill, card shown for 2.5s and
