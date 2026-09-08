@@ -388,21 +388,28 @@ export const BRANDS: Brand[] = [
       {
         name: "next-iconic-athlete",
         describes:
-          "A game night: the SPORTS card 'Who's the next iconic athlete?' fills the screen, then a player at the table makes his case for a college kid nobody has seen yet",
+          "A game night: the SPORTS card 'Who's the next iconic athlete?' is on screen while a player at the table makes his case for a college kid nobody has seen yet — Zion Williamson, out of Duke",
         tags: ["card/47"],
       },
       {
         name: "one-night-stands",
         describes:
-          "A game night: the FOR IT OR AGAINST IT card 'One Night Stands' fills the screen, then two players take opposite sides — one argues no strings, the other answers that you leave a piece of yourself behind",
+          "A game night: the FOR IT OR AGAINST IT card 'One Night Stands' is on screen while two players take opposite sides — one argues no strings and no expectations, the other answers that every time you give yourself away you leave a piece of yourself behind",
         tags: ["card/81"],
       },
       {
         name: "oral-sex-relationship",
         describes:
-          "A game night: the SEX & LIES card 'Is oral sex important in a relationship?' fills the screen, then the host takes it to a group at the table and they answer him together",
+          "A game night: the SEX & LIES card 'Is oral sex important in a relationship?' is on screen while the host takes it to a group at the table and they answer him together",
         tags: ["card/23"],
       },
+
+      // ⚠️ The three above were REBUILT IN THE CARD FRAME on 2026-09-08. They
+      // had shipped in the old format — blurred fill, card shown for 2.5s and
+      // then gone — which is the thing the card frame replaced two days earlier,
+      // and their `describes` still said "fills the screen, THEN", because that
+      // is what they did. A describes that narrates a format the clip no longer
+      // has is a caption writer working from a clip nobody has watched.
 
       // --- Deck cards. Added 2026-09-08, from the December 2021 tape. ---
       {
