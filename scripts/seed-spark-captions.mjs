@@ -21,7 +21,7 @@
  *   node scripts/seed-spark-captions.mjs --dry     (default: prints, writes nothing)
  *   node scripts/seed-spark-captions.mjs --write
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { put } from "@vercel/blob";
 
 const WRITE = process.argv.includes("--write");
@@ -30,9 +30,24 @@ const BRANDS = readFileSync(new URL("../src/lib/brands.ts", import.meta.url), "u
 /** The bare domain these posts send people to, as configured on the brand. */
 const DEST = "sparkbuilders.org/discovery";
 
+/*
+ * Where each post's picture lives, written by scripts/upload-spark-library.mjs.
+ *
+ * Pinned onto the record by name rather than left to `libraryFor`'s hash. The
+ * hash spreads a library across posts evenly, which is right when the pictures
+ * are interchangeable and wrong here: the Ways Out screenshot belongs to the
+ * Ways Out post and nowhere else. A pinned image also outranks every derivation
+ * in `resolveStill`, including the generated card these were built to replace.
+ */
+const MANIFEST = process.argv.find((a) => a.startsWith("--manifest="))?.slice(11);
+const IMAGES = MANIFEST && existsSync(MANIFEST)
+  ? JSON.parse(readFileSync(MANIFEST, "utf8"))
+  : {};
+
 const POSTS = [
   {
     id: "spark-builders:2026-09-15:19:00:instagram",
+    image: "build-star-math",
     topic: "Star Math, built by a seven-year-old",
     caption: `Math practice was the most boring part of her school day. She's seven. She rebuilt it.
 
@@ -46,6 +61,7 @@ Want to find the thing your own kid would rebuild? The sheet takes fifteen minut
   },
   {
     id: "spark-builders:2026-09-20:11:00:facebook",
+    image: "quote-the-sheet",
     topic: "Fifteen minutes at the kitchen table",
     caption: `The hardest part of helping a kid solve a problem: you're the scribe, not the answer key.
 
@@ -63,6 +79,7 @@ https://${DEST}
   },
   {
     id: "spark-builders:2026-09-22:19:00:instagram",
+    image: "build-cleaning-list",
     topic: "Emeka, 7 — Our Cleaning List",
     caption: `The chores argument in her apartment ended because a seven-year-old got tired of it.
 
@@ -76,6 +93,7 @@ Your kid already has a list like that. Fifteen minutes at the kitchen table and 
   },
   {
     id: "spark-builders:2026-09-27:11:00:facebook",
+    image: "build-ways-out",
     topic: "Elija, 14 — Ways Out",
     caption: `Elija is 14. He built a one-tap hub for free, 24/7 help against violence — crisis lines, a way out of the streets, and real paid youth jobs.
 
@@ -93,6 +111,7 @@ https://${DEST}
   },
   {
     id: "spark-builders:2026-09-29:19:00:instagram",
+    image: "quote-the-notebook",
     topic: "Every kid gets a notebook before anything gets built",
     caption: `Before anything gets built, every SPARK kid gets a real notebook.
 
@@ -108,6 +127,7 @@ Start your kid's first page tonight. Fifteen minutes at your table: ${DEST}
   },
   {
     id: "spark-builders:2026-10-04:11:00:facebook",
+    image: "pillars-four-places",
     topic: "The four places a builder looks",
     caption: `There's an order to where a builder looks, and it runs closest to widest.
 
@@ -130,6 +150,7 @@ https://${DEST}
   },
   {
     id: "spark-builders:2026-10-06:19:00:instagram",
+    image: "quote-stuck",
     topic: "The moment it breaks is the lesson",
     caption: `The best moment in a session is when the thing breaks.
 
@@ -145,6 +166,7 @@ Find out what your kid would build in the first place: ${DEST}
   },
   {
     id: "spark-builders:2026-10-11:11:00:facebook",
+    image: "quote-i-dont-know",
     topic: "It shows up the first time anything breaks",
     caption: `You've probably watched this happen.
 
@@ -164,6 +186,7 @@ https://${DEST}
   },
   {
     id: "spark-builders:2026-10-13:19:00:instagram",
+    image: "build-story-detective",
     topic: "Iye, 7 — Story Detective",
     caption: `Iye is seven. She built Story Detective — a game that turns reading into solving cases.
 
@@ -179,6 +202,7 @@ What would your kid rebuild if somebody asked them properly? Fifteen minutes at 
   },
   {
     id: "spark-builders:2026-10-18:11:00:facebook",
+    image: "quote-their-name",
     topic: "We build it exactly as they drew it",
     caption: `Here's a rule that surprises people: we build exactly what the kid drew. Not the better version. Not what we'd have done with it.
 
@@ -198,6 +222,7 @@ https://${DEST}
   },
   {
     id: "spark-builders:2026-10-20:19:00:instagram",
+    image: "quote-star-lights",
     topic: "A star lights when a real person uses it",
     caption: `A build doesn't count here until somebody actually uses it.
 
@@ -213,6 +238,7 @@ Your kid's first one starts with fifteen minutes at the table: ${DEST}
   },
   {
     id: "spark-builders:2026-10-25:11:00:facebook",
+    image: "build-together",
     topic: "Kourtney, 14 — Together",
     caption: `Kourtney is 14, and the thing she built for her family takes two minutes a day.
 
@@ -230,6 +256,7 @@ https://${DEST}
   },
   {
     id: "spark-builders:2026-10-27:19:00:instagram",
+    image: "quote-not-less-screen",
     topic: "The answer isn't less screen",
     caption: `People ask if this is a break from screens. It isn't, and that's deliberate.
 
@@ -245,6 +272,7 @@ Start with what they'd want to make: ${DEST}
   },
   {
     id: "spark-builders:2026-11-01:11:00:facebook",
+    image: "quote-real-quotes",
     topic: "Week two is an interview, not a build",
     caption: `The second session of a cohort has no building in it at all.
 
@@ -281,6 +309,7 @@ function factsFor(title) {
 }
 
 const records = {};
+const pinned = {};
 const problems = [];
 
 for (const post of POSTS) {
@@ -308,8 +337,17 @@ for (const post of POSTS) {
   if (platform === "facebook" && !post.caption.includes(`https://${DEST}`)) {
     problems.push(`${post.id}: a Facebook caption should carry the clickable link`);
   }
+  if (post.image) {
+    const url = IMAGES[post.image];
+    if (!url) {
+      problems.push(`${post.id}: no uploaded picture called "${post.image}" — run upload-spark-library.mjs first`);
+    } else {
+      pinned[post.id] = { url, name: post.image };
+    }
+  }
   records[post.id] = {
     caption: post.caption,
+    ...(pinned[post.id] ? { image: pinned[post.id] } : {}),
     suggested_hashtags: hashtags,
     recommended_post_time: time,
     platform_notes: `Written by hand on 2026-09-14 — the app's writer had no API credit. Parent-facing; sends to ${DEST}.`,
@@ -327,7 +365,7 @@ const ids = Object.keys(records);
 console.log(`${ids.length} caption records built, all topics matched against brands.ts`);
 for (const id of ids) {
   const r = records[id];
-  console.log(`  ${id}  ${String(r.caption.length).padStart(4)} chars  ${r.topic.title}`);
+  console.log(`  ${id}  ${String(r.caption.length).padStart(4)} chars  ${(r.image?.name ?? 'NO IMAGE').padEnd(22)} ${r.topic.title}`);
 }
 
 if (!WRITE) {
