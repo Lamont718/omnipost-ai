@@ -1200,9 +1200,18 @@ export const BRANDS: Brand[] = [
       audience:
         "Parents, grandparents and carers of kids roughly 7–14 — and the neighbors, teachers and family friends who already know these kids",
       cultural_context:
-        "SPARK Builders teaches a kid to notice a real problem somebody actually has, then direct the build of a real tool that fixes it. Run by Coach Lamont Kirton and Coach Kareem, from the Spark Builders Foundation, a nonprofit in the making. The public gallery lists five builders aged 7–14 who have each built something real and given it to a real person. Four of them may be named in a post: Emeka (7) Our Cleaning List, Iye (7) Story Detective, Kourtney (14) Together and Elija (14) Ways Out. The fifth, Sandra, is Lamont's own niece and is left out of this brand's material on purpose — the same call already made for the school deck and the Awesome Foundation letter. She is on the site; she is not proof, and she is not a post. A build given to a real person is called a star, and a builder's stars make a constellation. The thinking is analog and the making is assisted: the kid notices, interviews, maps, decides and sketches with pen, paper and people, and the coach operates the tool that makes it real. Tagline: Spark makes thinking visible.",
+        "SPARK Builders teaches a kid to notice a real problem somebody actually has, then direct the build of a real tool that fixes it. Run by Coach Lamont Kirton and Coach Kareem, from the Spark Builders Foundation, a nonprofit in the making. The public gallery lists five builders aged 7–14 who have each built something real and given it to a real person. Four of them may be named in a post: Emeka (7) Our Cleaning List, Iye (7) Story Detective, Kourtney (14) Together and Elija (14) Ways Out. The fifth, Sandra, is Lamont's own niece and is left out of this brand's material on purpose — the same call already made for the school deck and the Awesome Foundation letter. She is on the site; she is not proof, and she is not a post. The program itself: kids roughly 7 to 14, two coaches in the room, and one loop run over and over — notice a real problem somebody actually has, go interview that person, design the fix by hand in a notebook, the coach builds it while the kid says what is right and what is missing, fix what breaks, then give the finished thing to the person who needed it. The site also sells an eight-week cohort of about twelve to schools; that is the schools offer and a parent cannot sign up for it, so never describe it to a parent as something to enroll in. A build given to a real person is called a star, and a builder's stars make a constellation. The thinking is analog and the making is assisted: the kid notices, interviews, maps, decides and sketches with pen, paper and people, and the coach operates the tool that makes it real. Tagline: Spark makes thinking visible.",
       emoji_style: "minimal",
       house_rules: [
+        "EVERY post must say, in one plain sentence of your own, WHAT " +
+          "SPARK BUILDERS IS. A reader who has never heard of it has to finish " +
+          "the caption knowing. The shape: a program for kids 7 to 14 where a kid " +
+          "finds a real problem somebody actually has, designs the fix by hand in a " +
+          "notebook, and a coach builds it with them until it works — then they give " +
+          "it to the person who needed it, and two coaches run every session. Word it " +
+          "differently every time so it never reads as a pasted block, and put it AFTER " +
+          "the story, never before — the kid earns the explanation. A post that names " +
+          "only a kid and a website is a post about a stranger.",
         "NEVER write that the kids use AI, are on the computer, or use " +
           "technology as a building tool. It is not a hedge, it is not true, " +
           "and it is the sentence that loses a parent. In a SPARK room the " +
