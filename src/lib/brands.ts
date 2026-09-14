@@ -1147,6 +1147,255 @@ export const BRANDS: Brand[] = [
     ],
   },
   {
+    slug: "spark-builders",
+    name: "SPARK Builders",
+    // The site's own spark amber, read out of sparkbuilders.org's stylesheet
+    // on 2026-09-14, so the calendar dot matches the real brand.
+    colorHex: "#FFB300",
+    tagline: "Kids who notice a real problem — and build the fix",
+    active: true,
+    // No handle on purpose. Asked 2026-09-14: SPARK Builders has no social
+    // account of its own yet. The slug fallback would print "@spark-builders"
+    // on every mock-up, and that is the bug this field exists to prevent —
+    // every guessed handle checked before this turned out to be a real account
+    // belonging to somebody else. Fill it in from a handle he has given and
+    // checked against the live profile, never before.
+    //
+    // The posts are written anyway: they are ready the day the account exists,
+    // and he can post them from any account in the meantime.
+    //
+    // sparkbuilders.org serves ONE og:image — /opengraph-image, the same URL —
+    // on the homepage, /schools, /why, /method and /builders alike (checked
+    // 2026-09-14, all four identical). So the share image says nothing about
+    // the topic and must never illustrate a post. Falls through to the
+    // generated SPARK card, which is the honest picture until there are real
+    // session photographs in library/spark-builders/.
+    sitewideShareImage: true,
+    // Parents, so the sheet is the ask. `/discovery` is the one page on the
+    // site that asks a parent to DO something, and it costs them fifteen
+    // minutes rather than a decision about their child's schooling. The
+    // schools lane (cohorts, the cohort report, "zero lift for your staff")
+    // lives at /schools and is a different audience with a different voice —
+    // it is deliberately not what these posts are written for.
+    //
+    // One entry, no `match`: these topics are declared by hand and carry no
+    // page URL, so a matched destination could never fire. See the note on
+    // `sources` below.
+    destinations: [
+      {
+        url: "sparkbuilders.org/discovery",
+        action: "do the fifteen-minute sheet with their own kid",
+      },
+    ],
+    // Twice a week, both aimed at a parent's own scrolling hours rather than a
+    // school day: Tuesday evening and Sunday late morning. Two slots and not
+    // four because there is no account to post them to yet — writing more than
+    // he can send is how a queue full of near-duplicates gets built.
+    schedule: [
+      { day: 2, time: "19:00", platform: "instagram" },
+      { day: 0, time: "11:00", platform: "facebook" },
+    ],
+    voice: {
+      tone: "Parent to parent. Warm, plain and specific — proud of the kids without gushing, and never alarmed about screens. Tells one small true story rather than making a case.",
+      audience:
+        "Parents, grandparents and carers of kids roughly 7–14 — and the neighbors, teachers and family friends who already know these kids",
+      cultural_context:
+        "SPARK Builders teaches a kid to notice a real problem somebody actually has, then direct the build of a real tool that fixes it. Run by Coach Lamont Kirton and Coach Kareem, from the Spark Builders Foundation, a nonprofit in the making. The public gallery lists five builders aged 7–14 who have each built something real and given it to a real person. Four of them may be named in a post: Emeka (7) Our Cleaning List, Iye (7) Story Detective, Kourtney (14) Together and Elija (14) Ways Out. The fifth, Sandra, is Lamont's own niece and is left out of this brand's material on purpose — the same call already made for the school deck and the Awesome Foundation letter. She is on the site; she is not proof, and she is not a post. A build given to a real person is called a star, and a builder's stars make a constellation. The thinking is analog and the making is assisted: the kid notices, interviews, maps, decides and sketches with pen, paper and people, and the coach operates the tool that makes it real. Tagline: Spark makes thinking visible.",
+      emoji_style: "minimal",
+      house_rules: [
+        "NEVER write that the kids use AI, are on the computer, or use " +
+          "technology as a building tool. It is not a hedge, it is not true, " +
+          "and it is the sentence that loses a parent. In a SPARK room the " +
+          "kid's thinking never touches a screen — they notice, interview, " +
+          "map, decide and sketch with pen, paper and people, and the coach " +
+          "operates the tool. If the post has to name that arrangement, name " +
+          "it that way round: the kid directs and judges, the coach types.",
+        "Lead with the kid and what they made for somebody, not with the " +
+          "program. A parent scrolling recognizes a seven-year-old who got " +
+          "sick of arguing about chores before they recognize a method.",
+        "Never name a price, a fee, a range or a word like free, and never " +
+          "imply one. Nothing on the site names a number and a post must not " +
+          "invent the first one.",
+        "No mentoring vocabulary. This is not a behavior program and the " +
+          "moment it sounds like one a parent files it under something their " +
+          "kid does not need. Say project, problem, build, sketch, interview, " +
+          "notebook, Demo Day.",
+        "Do not be alarmed about screens or scold the reader about phones. " +
+          "The brand's own position is that the answer is not less screen — " +
+          "it is a kid who holds the wheel. A post that reads as a lecture " +
+          "about screen time is arguing against its own program.",
+        "Claim nothing the site does not. No outcome figures, no percentages, " +
+          "no 'kids improve by' anything, and no count of schools, cohorts or " +
+          "children beyond the five named builders.",
+      ],
+      banned_words: [
+        "mentoring",
+        "mentor",
+        "brotherhood",
+        "accountability",
+        "belonging",
+        "guidance",
+        "leadership",
+        "at-risk",
+        "check-ins",
+        "empower",
+        "unlock",
+        "screen time",
+        "coding",
+        "bootcamp",
+        "STEM",
+        "gamification",
+        "innovative",
+        "cutting-edge",
+        "21st-century skills",
+        "digital natives",
+        "learning journey",
+        "must-have",
+      ],
+      banned_phrases: [
+        // Already the tagline on the artwork, and true of every post.
+        "thinking made visible",
+        "spark makes thinking visible",
+        // The line that loses the room, in every form it has been written in.
+        "kids use ai",
+        "students use ai",
+        "the kids use ai",
+        "kids using ai",
+        "technology as a building tool",
+        "on the computer",
+        // Social boilerplate that says nothing and cannot be tapped anyway.
+        "link in bio",
+        "learn more",
+      ],
+      hashtags: [
+        "#SparkBuilders",
+        "#KidsWhoBuild",
+        "#RealProblemsRealTools",
+        "#BrooklynKids",
+        "#ParentingOutLoud",
+      ],
+      keywords: [
+        "kids",
+        "builders",
+        "notice",
+        "problem",
+        "notebook",
+        "parents",
+      ],
+      example_posts: [],
+    },
+    // Declared by hand, because sparkbuilders.org has NO sitemap — /sitemap.xml
+    // returns the 404 page (checked 2026-09-14). The site is Kareem's and
+    // read-only, so there is no version of this that ends in a crawl.
+    //
+    // Every `facts` block below was read off the live pages on 2026-09-14 and
+    // is quoted or closely paraphrased from them. That matters more here than
+    // on a sitemap brand: the grounding rule makes this the only place the
+    // writer may get a specific, so an invented line here becomes an invented
+    // claim about somebody's child.
+    //
+    // Literal topics carry no URL, which is why `destinations` has a single
+    // unmatched fallback — see `candidatesFor` in lib/sources.ts.
+    sources: [
+      {
+        topics: [
+          {
+            title: "The four places a builder looks",
+            facts:
+              "Spark Builders sends a kid looking in four places, closest to widest. Yourself: 'What's hard for me — and who else feels it?' Your Home: 'What's hard for my family?' Your School: 'What's hard for kids and teachers here?' Your Community: 'What's hard for people around me?'",
+          },
+          {
+            title: "Fifteen minutes at the kitchen table",
+            facts:
+              "SPARK Discovery is a sheet a parent does with their kid: '15 minutes at the kitchen table — that's all it takes.' The grown-up is told, in these words, 'You're the scribe, not the answer key.' Read each question out loud, then get quiet, and write what the kid actually says in their exact words — don't fix the grammar, don't suggest answers. There are no wrong answers and blank ones are fine. 'The goal isn't to answer everything. It's to find the one thing your kid lights up about.' It is the first two steps of the builder's loop: notice a problem, then research it by talking to someone who lives it.",
+          },
+          {
+            title: "Emeka, 7 — Our Cleaning List",
+            facts:
+              "Emeka is 7 and built Our Cleaning List, in the Your Home pillar, SPARK Spring 2026. The site describes it as 'the chore tool her family actually uses — so the apartment stops being something to argue about.' It helped her class and her family, and she has two stars lit.",
+          },
+          {
+            title: "Elija, 14 — Ways Out",
+            facts:
+              "Elija is 14 and built Ways Out, in the Your Community pillar, SPARK June 2026. The site describes it as 'a one-tap phone hub to free, 24/7 help against violence — crisis lines, a way out of the streets, and real paid youth jobs.' It helped kids on his block. One star lit.",
+          },
+          {
+            title: "Kourtney, 14 — Together",
+            facts:
+              "Kourtney is 14 and built Together, in the Your Home pillar, SPARK June 2026. The site describes it as 'a two-minute daily ritual: everyone shares how they really feel, answers one connection question, and protects real time together.' It helped her family. One star lit.",
+          },
+          {
+            title: "Iye, 7 — Story Detective",
+            facts:
+              "Iye is 7 and built Story Detective, in the Yourself pillar, SPARK June 2026. The site describes it as 'a game that turns reading into solving cases — read or listen, figure out what it means, and earn detective badges.' It helped herself, and kids who freeze at reading. One star lit.",
+          },
+          {
+            title: "Star Math, built by a seven-year-old",
+            facts:
+              "Star Math started from a school's own math practice and was rebuilt by a 7-year-old into a tool her whole class uses. In the site's words: 'The most boring part of the school day became the win the whole room shares.' It is live today and measures a kid's real growth.",
+          },
+          {
+            title: "Every kid gets a notebook before anything gets built",
+            facts:
+              "Every SPARK kid gets a real notebook. Before anything is built they write what they notice and draw what they want, by hand — the site's comparison is Leonardo's notebooks. 'The journal is their seed; the build grows from it. A drawing they made is theirs in a way a screen never is.'",
+          },
+          {
+            title: "We build it exactly as they drew it",
+            facts:
+              "SPARK builds exactly what the kid hands over, then shows them and asks: 'What do you notice about it? What's right? What's missing?' The site's line is that seeing the gap between what they imagined and what showed up 'is where a designer is born.' They redraw; the coaches rebuild.",
+          },
+          {
+            title: "The moment it breaks is the lesson",
+            facts:
+              "When a build breaks, SPARK treats it as the richest moment in the session — a real problem the kid actually cares about, explained back at their level. The site's phrasing: 'Stuck stops being a wall and becomes the next small move.'",
+          },
+          {
+            title: "A star lights when a real person uses it",
+            facts:
+              "On sparkbuilders.org a build only counts once a real person uses it: 'Every build given to a real person is a star — a light other people steer by. Every builder grows a constellation.' The instruction to the kid is 'Give it to someone real — and the star lights up.' Five builders, ages 7 to 14, have lit stars so far.",
+          },
+          {
+            title: "It shows up the first time anything breaks",
+            facts:
+              "The site names the thing a parent already notices: 'The laptop dies, there's no charger, and instead of working it out they just… stop. The form gets abandoned at the first confusing field.' The muscle that says 'this is hard — let me figure it out' never got built, because nothing on a curated screen ever asked for it.",
+          },
+          {
+            title: "The answer isn't less screen",
+            facts:
+              "Spark Builders' stated position: 'Block the channel the feed exploits and you block the one wonder and learning need too. The answer isn't less screen — it's fluency.' The aim is a kid holding the wheel of their own attention — 'author, not spectator.'",
+          },
+          {
+            title: "A build is a story",
+            facts:
+              "SPARK treats designing a build as storytelling: 'I want this to happen, then this.' Sequence, cause and effect, structure — the same thinking underneath everything else, and the notebook is where the story is held.",
+          },
+          {
+            title: "Where a kid's work lives afterwards",
+            facts:
+              "A kid's builds don't vanish when the session ends. Families choose one of three homes: a public star in the Sky, which needs a parent's written OK and gives the kid their own constellation page; a private unlisted link, visible only to people the family shares it with; or the kid's own registered domain pointed at their constellation — 'their name, their builds, an address they keep.'",
+          },
+        ],
+      },
+    ],
+    evergreenTopics: [
+      {
+        title: "What a kid says in the first two minutes is the build",
+        facts:
+          "SPARK's coaching rule is to capture only what's heavy: 'The thing a kid is really struggling with — or really thinking about — is one of the first few things they say. Follow that. Build that.'",
+      },
+      {
+        title: "The question that turns a complaint into a build",
+        facts:
+          "The two questions that do the work on the SPARK sheet are 'Who else do you think feels the same way?' and, on the live proof page, 'If a magic helper could fix ONE part, which part?' The first turns a kid complaining into a kid building; the second names the gap that hurts most.",
+      },
+      {
+        title: "Week two is an interview, not a build",
+        facts:
+          "In SPARK's eight-session arc, session two is Listen: the kid interviews the real person who has the problem — a parent, a friend, a teacher — and comes back with real quotes, not guesses.",
+      },
+    ],
+  },
+  {
     slug: "the-conductor",
     name: "The Conductor",
     colorHex: "#0EA5E9",
