@@ -889,7 +889,14 @@ export const BRANDS: Brand[] = [
       {
         name: "04-emeka-celebrate",
         describes: "Emeka throws both arms up under falling confetti",
-        tags: ["celebrate", "kwanzaa", "holiday", "month", "proud", "activities"],
+        // Not "activities": it is the last word of half the /guides slugs on
+        // the site, and a broad tag on ONE clip is a magnet rather than a
+        // group — it put falling confetti on "summer learning loss" and on
+        // "social emotional learning activities". A broad tag is only safe
+        // when several clips share it, the way "school" does; then the
+        // rotation still picks between them. "month" stays: it reaches
+        // black-history-month, which is a celebration.
+        tags: ["celebrate", "kwanzaa", "holiday", "month", "proud"],
       },
       {
         name: "05-emeka-friends-hug",

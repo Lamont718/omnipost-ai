@@ -141,15 +141,33 @@ export async function videosFor(brandSlug: string): Promise<LibraryVideo[]> {
 }
 
 /**
- * Where a slot sits in the rotation: which number post this is for its brand,
- * counting from a fixed week.
+ * Where a slot sits in the rotation: which clip in the pool this post takes.
  *
  * Deliberately not the hash used for images, and not a count of days either.
  * Both leave the rotation lumpy — the first draft counted days, and across
  * thirty-one Emeka slots it used one clip five times and three clips never,
  * because a Mon/Wed/Fri schedule steps by 12, then -8, then 3, and none of
- * that is coprime with anything useful. Counting POSTS steps by exactly one,
- * so a library of fifteen cycles cleanly through all fifteen.
+ * that is coprime with anything useful.
+ *
+ * ⚠️ Counting POSTS — `weeks * slotsInTheWeek + position` — was the second
+ * draft and it has the SAME disease one level up. Between two airings of ONE
+ * slot the count steps by the number of slots in the week, so the clip a
+ * Monday can reach is `weeks * slots + position (mod poolSize)`: when slots
+ * and poolSize share a factor, that slot can only ever reach poolSize/gcd of
+ * the library. Measured on Emeka Explores, 4 slots a week and 14 clips in
+ * Blob: **each slot reached 7 of the 14, and Monday and Wednesday reached the
+ * SAME 7** — half the library was unpostable on Instagram and the other half
+ * came round twice as often as it should. The docstring's own claim, that
+ * "a library of fifteen cycles cleanly through all fifteen", was true only
+ * because fifteen happens to be coprime with four; the fifteenth clip had
+ * never been uploaded, and dropping to fourteen silently halved the rotation.
+ * This is the third appearance of one bug — `weekStep` in sources.ts for
+ * topics, the tagged-group modulo below for clips, and this.
+ *
+ * So the step is ONE PER WEEK for a given slot, which is coprime with every
+ * pool size there can be, and the slots within a week are spread across the
+ * pool by an offset instead. Every slot reaches every clip, whatever the
+ * library size, and two slots in the same week never open on the same face.
  *
  * The brand's own schedule is what turns a date back into a post number, and
  * the slot id carries the brand slug in front of the date — the same parse
@@ -157,7 +175,7 @@ export async function videosFor(brandSlug: string): Promise<LibraryVideo[]> {
  * moved, an id from an older shape) falls back to a hash rather than to
  * nothing.
  */
-function rotationIndex(slotId: string): number {
+function rotationIndex(slotId: string, poolSize: number): number {
   const match = slotId.match(/^([a-z0-9-]+):(\d{4})-(\d{2})-(\d{2}):(\d{2}):(\d{2}):([a-z]+)$/);
   if (match) {
     const [, slug, y, m, d, hh, mm, platform] = match;
@@ -179,7 +197,9 @@ function rotationIndex(slotId: string): number {
         // run Thursday to Wednesday, and a Mon/Wed/Fri brand steps -2, 1, 4
         // instead of 1, 1, 1 — it still spreads, but only by luck.
         const weeks = Math.floor((utc / 86_400_000 + 4) / 7);
-        return weeks * ordered.length + position;
+        // One step per week for this slot; the slots within a week start at
+        // different points in the pool so they don't all show the same clip.
+        return weeks + Math.round((position * poolSize) / ordered.length);
       }
     }
   }
@@ -256,7 +276,7 @@ export function pickVideoForSlot(
 ): LibraryVideo | null {
   if (videos.length === 0) return null;
 
-  const index = rotationIndex(slotId);
+  const index = rotationIndex(slotId, videos.length);
 
   if (hint) {
     const flat = flatten(hint);
