@@ -16,7 +16,11 @@
  * 2026-08-30 → 2026-10-03. Concatenating months double-counts the overlap —
  * that is how "221 upcoming posts" was once reported for 198. Deduped by id.
  *
- *   node scripts/export-spark-pack.mjs "<destination folder>"
+ * Only posts dated today or later, unless --from=YYYY-MM-DD says otherwise. A
+ * slot whose date has gone by was never sent (there is no account to send it
+ * from) and sitting first in the folder it reads as the next thing to post.
+ *
+ *   node scripts/export-spark-pack.mjs "<destination folder>" [--from=2026-09-29]
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 
@@ -31,6 +35,10 @@ if (!KEY) {
   console.error("APP_KEY is not set");
   process.exit(1);
 }
+
+const now = new Date();
+const FROM = process.argv.find((a) => a.startsWith("--from="))?.slice(7)
+  ?? [now.getFullYear(), now.getMonth() + 1, now.getDate()].map((n) => String(n).padStart(2, "0")).join("-");
 
 const MONTHS = ["2026-09", "2026-10", "2026-11", "2026-12"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -71,7 +79,7 @@ for (const month of MONTHS) {
 }
 
 const posts = [...seen.values()]
-  .filter((p) => p.brand.slug === "spark-builders" && p.caption)
+  .filter((p) => p.brand.slug === "spark-builders" && p.caption && p.date >= FROM)
   .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
 if (!posts.length) {
@@ -185,6 +193,9 @@ TWO THINGS TO KNOW
 ---------------------------------------------------------------------
 There is no SPARK Builders social account yet. These are written and
 waiting; post them from whichever account you like in the meantime.
+
+Rewritten on 29 September 2026 to lead with the kid and what they made,
+and to say what SPARK Builders is in one sentence instead of a paragraph.
 
 These captions were written by hand, not by the app. The Anthropic API
 key has had no credit since 3 September, so OmniPost's writer cannot

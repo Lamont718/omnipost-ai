@@ -44,141 +44,89 @@ const IMAGES = MANIFEST && existsSync(MANIFEST)
   ? JSON.parse(readFileSync(MANIFEST, "utf8"))
   : {};
 
+/*
+ * Rewritten 2026-09-29, on his note that the first fourteen were not making an
+ * impression. They were true and they were flat, and the reasons were the same
+ * in all fourteen:
+ *
+ *   - The explainer his 09-14 note asked for had grown into a sixty-word block
+ *     pasted into every caption in slightly different words. Fourteen posts
+ *     read as one post. It is now ONE sentence, still after the story, and
+ *     still naming the age range and what the kid actually does.
+ *   - The first line was usually a setup rather than the point. Instagram
+ *     shows about 125 characters before "more", so the kid and the thing they
+ *     made now arrive in that line.
+ *   - Stock connective phrases ("That's the part that matters", "Here's what
+ *     SPARK Builders is") that sound like a caption rather than a parent.
+ *
+ * And the first four dates (09-15 to 09-27) had passed with no account to post
+ * them from, which put the notebook post first. The run now starts tonight and
+ * opens with the builds: Emeka, Elija, Iye. The first post somebody sees is the
+ * one that has to explain the program without trying to.
+ *
+ * No quote card repeats the opening line of its own caption — checked against
+ * the text in make-spark-cards.mjs.
+ */
 const POSTS = [
   {
-    id: "spark-builders:2026-09-15:19:00:instagram",
-    image: "build-star-math",
-    topic: "Star Math, built by a seven-year-old",
-    caption: `Math practice was the most boring part of her school day. She's seven. She rebuilt it.
-
-Star Math started as her own complaint and ended up being the thing her whole class uses. It's live right now, and it measures real growth for the kids on it.
-
-Here's what SPARK Builders is. It's a program for kids 7 to 14. A kid finds a problem a real person actually has, works out what would fix it, and designs it by hand in a notebook. The coach does the typing; the kid does the deciding, the judging and the fixing. Then they give the finished thing to the person who needed it. Two coaches run every session — Coach Lamont and Coach Kareem.
-
-Want to find the thing your own kid would rebuild? The sheet takes fifteen minutes at the kitchen table: ${DEST}
-
-#SparkBuilders #KidsWhoBuild #RealProblemsRealTools #BrooklynKids`,
-  },
-  {
-    id: "spark-builders:2026-09-20:11:00:facebook",
-    image: "quote-the-sheet",
-    topic: "Fifteen minutes at the kitchen table",
-    caption: `The hardest part of helping a kid solve a problem: you're the scribe, not the answer key.
-
-That's the actual instruction on the SPARK Discovery sheet, and the whole thing is fifteen minutes at the kitchen table. You read the questions out loud, then you get quiet. You write down what your kid says — their exact words. You don't fix the grammar and you don't suggest a better answer.
-
-No wrong answers. Blank ones are fine. You're not testing them, you're helping them notice.
-
-That sheet is the front door to SPARK Builders, a program for kids 7 to 14: your kid finds a problem somebody real actually has, goes and asks them about it, designs the fix by hand, and a coach builds it with them until it works. Then they hand it to the person who needed it. Two coaches in the room, Coach Lamont and Coach Kareem.
-
-Fifteen minutes, whenever you've got them.
-
-https://${DEST}
-
-#SparkBuilders #KidsWhoBuild #ParentingOutLoud`,
-  },
-  {
-    id: "spark-builders:2026-09-22:19:00:instagram",
+    id: "spark-builders:2026-09-29:19:00:instagram",
     image: "build-cleaning-list",
     topic: "Emeka, 7 — Our Cleaning List",
-    caption: `The chores argument in her apartment ended because a seven-year-old got tired of it.
+    caption: `A seven-year-old got tired of her family arguing about chores. So she built the fix.
 
-Emeka built Our Cleaning List. It's the chore tool her family actually uses, which is the only kind that counts. Two stars lit — one for her family, one for her class.
+Emeka made Our Cleaning List: one button that says "Something needs cleaning!", a job list for everyone in the house, and thank-you stars for whoever does the work. It's the chore tool her family actually uses, so the apartment stops being something to argue about.
 
-Nobody assigned it to her, and that's the whole idea behind SPARK Builders. It's a program for kids 7 to 14: the kid notices a real problem somebody has, decides what would fix it, and designs it by hand in a notebook. A coach does the typing while the kid says what's right and what's missing. It only counts once a real person is actually using it.
+She built it at SPARK Builders, where kids 7 to 14 pick a real problem somebody has, draw the fix by hand in a notebook, and direct a coach who builds it with them until it works.
 
-Your kid already has a list like that. Fifteen minutes at the kitchen table and you'll find out what's on it: ${DEST}
+Ask your kid what they'd fix at home. Then write down exactly what they say. The 15-minute sheet is at ${DEST}
 
-#SparkBuilders #KidsWhoBuild #RealProblemsRealTools #BrooklynKids`,
-  },
-  {
-    id: "spark-builders:2026-09-27:11:00:facebook",
-    image: "build-ways-out",
-    topic: "Elija, 14 — Ways Out",
-    caption: `Elija is 14. He built a one-tap hub for free, 24/7 help against violence — crisis lines, a way out of the streets, and real paid youth jobs.
-
-He built it for kids on his block.
-
-That's the part that matters. Not that a fourteen-year-old made something that works, but that he looked around at where he actually lives, named who was in trouble, and built the kind of help you need at two in the morning.
-
-SPARK Builders is the program behind it: kids 7 to 14, two coaches, one loop. Notice a real problem. Go interview the person who has it. Design the fix by hand. A coach builds it with you, you say what's wrong with it, and you keep going until it works. Then you give it away — because a build doesn't count here until a real person uses it.
-
-Want to know what your own kid would build for the people around them?
-
-https://${DEST}
-
-#SparkBuilders #RealProblemsRealTools #BrooklynKids`,
-  },
-  {
-    id: "spark-builders:2026-09-29:19:00:instagram",
-    image: "quote-the-notebook",
-    topic: "Every kid gets a notebook before anything gets built",
-    caption: `Before anything gets built, every SPARK kid gets a real notebook.
-
-They write what they notice. They draw what they want. By hand — Leonardo kept his notebooks the same way. The journal is the seed, and the build grows out of it.
-
-That's SPARK Builders, and the paper is deliberate. Kids 7 to 14, two coaches, and all the thinking off the screen: notice a real problem somebody has, go ask them about it, sketch the fix. Only then does anyone make it — the coach types while the kid judges every version — and then they hand it to the person who needed it.
-
-Here's the reason it's paper: a drawing they made is theirs in a way a screen never is. Can't be faked, can't be copied, and a year from now they can still hold it.
-
-Start your kid's first page tonight. Fifteen minutes at your table: ${DEST}
-
-#SparkBuilders #KidsWhoBuild #ParentingOutLoud`,
+#SparkBuilders #KidsWhoBuild #BrooklynKids #RealProblemsRealTools`,
   },
   {
     id: "spark-builders:2026-10-04:11:00:facebook",
-    image: "pillars-four-places",
-    topic: "The four places a builder looks",
-    caption: `There's an order to where a builder looks, and it runs closest to widest.
+    image: "build-ways-out",
+    topic: "Elija, 14 — Ways Out",
+    caption: `Elija is 14. He built something for the kids on his block who need help at two in the morning.
 
-Yourself — what's hard for me, and who else feels it?
-Your Home — what's hard for my family?
-Your School — what's hard for kids and teachers here?
-Your Community — what's hard for people around me?
+It's called Ways Out. One tap on a phone and it's all there: crisis lines, a way off the streets, and real paid youth jobs. Help against violence, around the clock, in one place.
 
-That's step one of SPARK Builders, a program for kids 7 to 14. A kid works those four places until they find the one problem worth building for, goes and interviews the person who has it, designs the fix by hand, and a coach builds it with them until it works. Then it goes to the person who needed it.
+Nobody gave him that problem. He looked at where he lives, named who was in trouble, and designed the answer himself.
 
-Most kids start at Yourself, because that's the one they can see without help. The interesting part is what happens next: the question keeps turning outward until it stops being about them.
+That's SPARK Builders: kids 7 to 14 find a problem a real person has, go and talk to them, sketch the fix by hand, and work with two coaches until it's built. Then they give it to the people it's for.
 
-That turn is the point. Empathy isn't the side effect here. It's the target.
-
-Four places, four sets of questions, fifteen minutes.
+What has your kid noticed about the neighborhood? Fifteen minutes and a pencil will tell you.
 
 https://${DEST}
+
+#SparkBuilders #BrooklynKids #RealProblemsRealTools`,
+  },
+  {
+    id: "spark-builders:2026-10-06:19:00:instagram",
+    image: "build-story-detective",
+    topic: "Iye, 7 — Story Detective",
+    caption: `Some kids freeze when it's time to read. Iye, 7, turned reading into a case to crack.
+
+Story Detective is her game. Read the story or listen to it, work out what it really means, earn a detective badge. She built it for herself first. Now it's for any kid who locks up at the sight of a page.
+
+At SPARK Builders, kids 7 to 14 start with a problem they actually feel, draw the fix in a notebook, tell the coach what's right and what's missing until it works, and then hand it to whoever needs it.
+
+Your kid has a problem like that. Find it together in 15 minutes: ${DEST}
 
 #SparkBuilders #KidsWhoBuild #RealProblemsRealTools`,
   },
   {
-    id: "spark-builders:2026-10-06:19:00:instagram",
-    image: "quote-stuck",
-    topic: "The moment it breaks is the lesson",
-    caption: `The best moment in a session is when the thing breaks.
-
-Not a metaphor. When a build stops working, the kid is standing in front of a real problem they actually care about — not a worksheet, not a hypothetical. Theirs.
-
-So nobody rescues it. The coach asks why, and the explanation comes back in words the kid already uses. "Oh, I see." Then they redraw.
-
-That's SPARK Builders in one moment. Kids 7 to 14 find a problem a real person has, design the fix by hand in a notebook, and a coach builds it while they judge it — break it, fix it, and finally give it to whoever needed it. Stuck stops being a wall and turns into the next small move.
-
-Find out what your kid would build in the first place: ${DEST}
-
-#SparkBuilders #KidsWhoBuild #ParentingOutLoud`,
-  },
-  {
     id: "spark-builders:2026-10-11:11:00:facebook",
-    image: "quote-i-dont-know",
-    topic: "It shows up the first time anything breaks",
-    caption: `You've probably watched this happen.
+    image: "quote-the-sheet",
+    topic: "Fifteen minutes at the kitchen table",
+    caption: `Parents, here's your whole job: you're the scribe, not the answer key.
 
-The laptop dies. There's no charger. And instead of working it out, they just… stop.
+That's the instruction on the SPARK Discovery sheet. Read each question out loud. Then get quiet. Write down exactly what your kid says, in their words. Don't fix the grammar. Don't suggest a better answer. A blank is fine.
 
-Or the form has one confusing field and the whole thing gets abandoned.
+You're not grading anything. You're listening for the thing that makes their voice change.
 
-It isn't laziness and it isn't "kids these days." The muscle that says "this is hard, let me figure it out" never got built, because nothing smooth ever asked for it.
+Every build at SPARK Builders starts there. It's a program where kids 7 to 14 take a problem a real person has, design the fix by hand, and build it with two coaches until it works for the person who needed it. This sheet is the first two steps, done at your table.
 
-That muscle is what SPARK Builders trains. It's a program for kids 7 to 14: a kid finds a real problem somebody actually has, goes and interviews them about it, designs the fix by hand, and a coach builds it with them until it works. Two coaches in the room, and all the thinking on paper.
-
-Not less of anything. A kid who can stay with one hard, real thing long enough to finish it — and who knows what to do when it breaks.
+Fifteen minutes. That's all it takes.
 
 https://${DEST}
 
@@ -186,107 +134,168 @@ https://${DEST}
   },
   {
     id: "spark-builders:2026-10-13:19:00:instagram",
-    image: "build-story-detective",
-    topic: "Iye, 7 — Story Detective",
-    caption: `Iye is seven. She built Story Detective — a game that turns reading into solving cases.
+    image: "build-together",
+    topic: "Kourtney, 14 — Together",
+    caption: `Kourtney is 14. She gave her family two minutes a day that nobody gets to skip.
 
-Read it or listen to it, work out what it actually means, earn a detective badge.
+It's called Together. Everyone says how they really feel, answers one connection question, and protects a little real time with each other. Two minutes. Her family uses it.
 
-She built it for herself first. Then it turned out to be for every kid who freezes at reading.
+She made it at SPARK Builders, where kids 7 to 14 notice a real problem at home, at school or down the block, sketch the fix in a notebook, and direct a coach who builds it until it works, then give it to the people it's for.
 
-That's SPARK Builders: kids 7 to 14 learn to notice a real problem — starting with their own — design the fix by hand in a notebook, and a coach builds it with them while they say what's right and what's missing. A star lights when a real person uses it, not when the thing is finished.
+Your kid has noticed things about your house. Ask them. The 15-minute sheet: ${DEST}
 
-What would your kid rebuild if somebody asked them properly? Fifteen minutes at your table: ${DEST}
-
-#SparkBuilders #KidsWhoBuild #RealProblemsRealTools`,
+#SparkBuilders #ParentingOutLoud #RealProblemsRealTools`,
   },
   {
     id: "spark-builders:2026-10-18:11:00:facebook",
+    image: "quote-i-dont-know",
+    topic: "It shows up the first time anything breaks",
+    caption: `The laptop dies. There's no charger. And instead of working it out, your kid just… stops.
+
+If you've watched that happen, you're not imagining it, and it isn't laziness. The part of a kid that says "this is hard, let me figure it out" never got a workout, because nothing smooth ever asked for one.
+
+SPARK Builders is where it gets one. Kids 7 to 14 choose a real problem somebody has, interview that person, design the fix on paper, and stay with it through every version that breaks, a coach beside them, until it works and they hand it over.
+
+It's a lot easier to keep going on something you drew yourself, for somebody you know.
+
+Start with 15 minutes and one question: what's hard for your kid?
+
+https://${DEST}
+
+#SparkBuilders #ParentingOutLoud #KidsWhoBuild`,
+  },
+  {
+    id: "spark-builders:2026-10-20:19:00:instagram",
+    image: "build-star-math",
+    topic: "Star Math, built by a seven-year-old",
+    caption: `Math practice was the most boring part of the school day. A seven-year-old rebuilt it, and now her whole class uses it.
+
+It's called Star Math. It's live today, and it measures each kid's real growth. The most boring part of the day became the win the whole room shares.
+
+She did it through SPARK Builders. Kids 7 to 14 take something that isn't working for real people, redesign it by hand in a notebook, and judge every version a coach builds until it's right. Then it goes to the people who need it.
+
+Which part of your kid's day would they rebuild? Find out in 15 minutes: ${DEST}
+
+#SparkBuilders #KidsWhoBuild #BrooklynKids`,
+  },
+  {
+    id: "spark-builders:2026-10-25:11:00:facebook",
     image: "quote-their-name",
     topic: "We build it exactly as they drew it",
-    caption: `Here's a rule that surprises people: we build exactly what the kid drew. Not the better version. Not what we'd have done with it.
+    caption: `We build exactly what the kid drew. Not a better version. Not what a grown-up would have done with it.
 
-Then we show it to them and ask three questions. What do you notice? What's right? What's missing?
+Then we put it in front of them and ask three questions. What do you notice? What's right? What's missing?
 
-And they see it — the gap between the thing in their head and the thing in front of them. That gap is where a designer gets born. They jot it down, they redraw, we rebuild. Then they do it again.
+And they see it: the gap between what was in their head and what showed up. That gap is where a designer is born. They grab the notebook, redraw it, and we build it again. And again.
 
-That loop is SPARK Builders, a program for kids 7 to 14. Somebody real has a problem: the kid notices it, goes and interviews them, designs the fix by hand, judges every version the coach builds, and hands the finished thing to whoever needed it.
+That loop is SPARK Builders. Kids 7 to 14 find a real problem somebody has, design the fix by hand, and direct two coaches through version after version until it works for the person who needed it.
 
-Nobody learns that from being given a polished version of their own idea.
-
-Fifteen minutes to get the first drawing out of them.
+The first drawing starts at your kitchen table.
 
 https://${DEST}
 
 #SparkBuilders #KidsWhoBuild #ParentingOutLoud`,
   },
   {
-    id: "spark-builders:2026-10-20:19:00:instagram",
-    image: "quote-star-lights",
-    topic: "A star lights when a real person uses it",
-    caption: `A build doesn't count here until somebody actually uses it.
-
-That's the rule. Finish it and it's a project. Give it to a real person who needed it and it becomes a star. Every builder grows a constellation that way.
-
-SPARK Builders is where that happens — a program for kids 7 to 14, two coaches, and a loop that starts with noticing a problem somebody real actually has and ends with handing them the fix. The kid designs it by hand in a notebook; the coach does the typing.
-
-Five kids have lit stars so far, among them a chore list, a reading game, a two-minute family ritual, and a hub for kids who need a way out. None of them got there by having a good idea. They got there by giving it to someone.
-
-Your kid's first one starts with fifteen minutes at the table: ${DEST}
-
-#SparkBuilders #KidsWhoBuild #RealProblemsRealTools #BrooklynKids`,
-  },
-  {
-    id: "spark-builders:2026-10-25:11:00:facebook",
-    image: "build-together",
-    topic: "Kourtney, 14 — Together",
-    caption: `Kourtney is 14, and the thing she built for her family takes two minutes a day.
-
-It's called Together. Everybody says how they really feel, answers one connection question, and protects a little real time together. Two minutes. That's the whole thing.
-
-She wasn't trying to fix her family. She was trying to make one small thing happen every day that couldn't get skipped. Her family uses it. That's the star.
-
-SPARK Builders is how she got there — a program for kids 7 to 14 where a kid finds a real problem somebody has, goes and asks them about it, designs the fix by hand in a notebook, and a coach builds it with them until it actually works.
-
-If you want to know what your own kid has noticed about your house — and they have noticed — the sheet takes fifteen minutes.
-
-https://${DEST}
-
-#SparkBuilders #RealProblemsRealTools #ParentingOutLoud`,
-  },
-  {
     id: "spark-builders:2026-10-27:19:00:instagram",
-    image: "quote-not-less-screen",
-    topic: "The answer isn't less screen",
-    caption: `People ask if this is a break from screens. It isn't, and that's deliberate.
+    image: "quote-the-notebook",
+    topic: "Every kid gets a notebook before anything gets built",
+    caption: `Before anything gets built, every SPARK kid gets a real notebook.
 
-Block the channel a feed exploits and you block the same one wonder and learning come through. Taking it away doesn't build anything.
+What they notice goes in it. What they want goes in it, drawn by hand. Leonardo kept his ideas the same way. The build grows out of those pages, never the other way round.
 
-So here's what SPARK Builders actually does. Kids 7 to 14, two coaches. All the thinking happens on paper, with people — noticing a real problem somebody has, asking them about it, sketching the fix. The only screen in the room is the coach's, and the making only starts once the kid knows what they want. Then they judge it, fix what broke, and give it to the person who needed it.
+SPARK Builders is a program for kids 7 to 14 where the noticing, asking and sketching all happen with pen, paper and people. Then a coach builds what the kid designed, and the kid decides what's right, what's missing, and who it goes to.
 
-The aim is a kid holding the wheel instead of being steered by it. Author, not spectator.
+Find them a pen tonight. The first page starts with our 15-minute sheet: ${DEST}
 
-Start with what they'd want to make: ${DEST}
-
-#SparkBuilders #ParentingOutLoud #KidsWhoBuild`,
+#SparkBuilders #KidsWhoBuild #ParentingOutLoud`,
   },
   {
     id: "spark-builders:2026-11-01:11:00:facebook",
-    image: "quote-real-quotes",
-    topic: "Week two is an interview, not a build",
-    caption: `The second session of a cohort has no building in it at all.
+    image: "pillars-four-places",
+    topic: "The four places a builder looks",
+    caption: `Ask a kid "what's a problem you could solve?" and you'll probably get a shrug. Ask these four instead.
 
-The kid goes and interviews the person who actually has the problem. A parent, a friend, a teacher. They come back with real quotes — what the person said, not what the kid assumed they'd say.
+What's hard for me, and who else feels it?
+What's hard for my family?
+What's hard for kids and teachers at my school?
+What's hard for people around me?
 
-It's the step everyone wants to skip, and it's the one that decides whether the thing is any good. You can't fix a problem you only imagined.
+Closest to widest. Most kids start with themselves, because that's the one they can see without help. Then the question keeps turning outward until it's about somebody else. That turn is the point.
 
-That's session two of SPARK Builders, a program for kids 7 to 14: notice a real problem, go ask the person who has it, design the fix by hand in a notebook, build it with a coach until it works, then give it away. Two coaches in the room and a notebook for every kid.
+It's step one at SPARK Builders, a program where kids 7 to 14 pick one of those problems, interview the person who has it, design the fix by hand, and build it with two coaches, then give it away.
 
-The first two steps of that loop are the sheet — notice it, then go ask.
+Try the four questions tonight.
 
 https://${DEST}
 
 #SparkBuilders #KidsWhoBuild #RealProblemsRealTools`,
+  },
+  {
+    id: "spark-builders:2026-11-03:19:00:instagram",
+    image: "quote-stuck",
+    topic: "The moment it breaks is the lesson",
+    caption: `The best moment in a SPARK session? The second the thing breaks.
+
+Because now the kid is standing in front of a real problem they care about. Not a worksheet. Theirs.
+
+Nobody rescues it. The coach asks what happened and explains it in words the kid already uses. "Oh, I see." Then out comes the notebook, and they redraw.
+
+SPARK Builders is a program for kids 7 to 14: find a problem a real person has, sketch the fix, judge every version a coach builds, and keep going until it works and goes to the person who needed it.
+
+Find what your kid would build: ${DEST}
+
+#SparkBuilders #KidsWhoBuild #ParentingOutLoud`,
+  },
+  {
+    id: "spark-builders:2026-11-08:11:00:facebook",
+    image: "quote-real-quotes",
+    topic: "Week two is an interview, not a build",
+    caption: `Before a SPARK kid builds anything, they go and ask.
+
+They find the person who has the problem: a parent, a friend, a teacher. They come back with that person's actual words, not what the kid guessed they'd say.
+
+It's the step everybody wants to skip. It's also the one that decides whether the build is any good.
+
+That's how SPARK Builders works. Kids 7 to 14 notice a real problem, interview the person who lives with it, design the fix by hand in a notebook, and build it with two coaches until it works, then hand it over.
+
+Want to practice the asking part at home? That's what the sheet is for.
+
+https://${DEST}
+
+#SparkBuilders #KidsWhoBuild #RealProblemsRealTools`,
+  },
+  {
+    id: "spark-builders:2026-11-10:19:00:instagram",
+    image: "quote-star-lights",
+    topic: "A star lights when a real person uses it",
+    caption: `Finishing a build doesn't count here. Giving it away does.
+
+When a kid hands what they made to a real person who needed it, a star lights, and every builder grows their own constellation. The ones lit so far include a chore list, a reading game, a two-minute family ritual and a hub for kids who need a way out.
+
+That's SPARK Builders: kids 7 to 14 notice a problem somebody has, sketch the fix in a notebook, direct a coach through building it, and then give it to them.
+
+Your kid's first star starts with a 15-minute conversation: ${DEST}
+
+#SparkBuilders #KidsWhoBuild #RealProblemsRealTools #BrooklynKids`,
+  },
+  {
+    id: "spark-builders:2026-11-15:11:00:facebook",
+    image: "quote-not-less-screen",
+    topic: "The answer isn't less screen",
+    caption: `People ask if SPARK is a break from screens. It isn't, and that's on purpose.
+
+Cut a kid off from the feed and you also cut them off from the channel wonder and learning come through. Taking something away doesn't build anything.
+
+So we build. At SPARK Builders, kids 7 to 14 do all their thinking on paper and with people: noticing a real problem somebody has, asking them about it, sketching the fix. Then a coach makes it real while the kid calls every shot, fixes what breaks, and hands it to the person who needed it. Two coaches in the room.
+
+Author, not spectator.
+
+Start with what your kid would want to make.
+
+https://${DEST}
+
+#SparkBuilders #ParentingOutLoud #KidsWhoBuild`,
   },
 ];
 
@@ -350,7 +359,7 @@ for (const post of POSTS) {
     ...(pinned[post.id] ? { image: pinned[post.id] } : {}),
     suggested_hashtags: hashtags,
     recommended_post_time: time,
-    platform_notes: `Written by hand on 2026-09-14 — the app's writer had no API credit. Parent-facing; sends to ${DEST}.`,
+    platform_notes: `Written by hand, rewritten 2026-09-29 — the app's writer had no API credit. Parent-facing; sends to ${DEST}.`,
     generatedAt: new Date().toISOString(),
     topic: { title: post.topic, context: facts, source: "evergreen" },
   };
