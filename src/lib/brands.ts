@@ -299,6 +299,14 @@ export interface Brand {
   evergreenTopics: EvergreenTopic[];
 }
 
+/**
+ * When the December 2021 game-night footage may post: Thanksgiving weekend to
+ * Twelfth Night. Every clip cut from that tape has stockings, garland and red
+ * bows in shot, and on 2026-10-06 the October calendar read to him as "still
+ * alot of the christmas themed event". In season it is the right footage.
+ */
+const CHRISTMAS_2021 = { from: "11-27", to: "01-06" };
+
 /** Paths that are never worth a social post, on any site. */
 const BOILERPLATE = [
   /\/(privacy|terms|refunds?|shipping|contact|login|signup|account|cart|checkout|faq)\b/i,
@@ -367,7 +375,12 @@ export const BRANDS: Brand[] = [
      * are burned in. It stays out of the calendar until Lamont has heard it.
      *
      * ⚠ Every one of the eleven is from a Christmas game night — stockings on
-     * the mantel and garland on the table, in shot, in all of them.
+     * the mantel and garland on the table, in shot, in all of them. So they
+     * carry `season: CHRISTMAS_2021` and are only picked from Thanksgiving to
+     * early January (2026-10-06). The first three — next-iconic-athlete,
+     * one-night-stands, oral-sex-relationship — are NOT Christmas (a living
+     * room, a couch, an outdoor deck in summer; checked frame by frame) and
+     * run all year.
      *
      * The fourteen podcast clips are still in the same folder and still in the
      * rotation for the untagged slots. They are not declared here, so they
@@ -427,18 +440,21 @@ export const BRANDS: Brand[] = [
         describes:
           "A game night: the SPORTS card 'Should athletes in the WNBA get as much pay as those in the NBA?' is on screen while a woman at the table argues yes — they bring the fans in, they sacrifice their bodies, so they should get the same as the men",
         tags: ["card/53"],
+        season: CHRISTMAS_2021,
       },
       {
         name: "law-break-the-law",
         describes:
           "A game night: the SOCIAL MATTERS card 'Would you break the law to help a loved one?' is on screen while a woman says she would break it without hesitation — she will not support any system that brings her brother, her husband or her children down",
         tags: ["card/7"],
+        season: CHRISTMAS_2021,
       },
       {
         name: "law-not-going-to-jail",
         describes:
           "A game night: the SOCIAL MATTERS card 'Would you break the law to help a loved one?' is on screen while a man challenges the last answer — the priority is the family, and going to jail for what someone else did destroys it, so he buys them the best lawyer instead",
         tags: ["card/7"],
+        season: CHRISTMAS_2021,
       },
 
       /*
@@ -455,48 +471,56 @@ export const BRANDS: Brand[] = [
         describes:
           "A game night: the GAME NIGHT card 'When the trust is broken in a relationship, can you ever truly get it back?' is on screen while a woman answers hell no — even if they say they trust you again they will always question whatever you do",
         tags: ["trust is broken"],
+        season: CHRISTMAS_2021,
       },
       {
         name: "trust-heal-over-time",
         describes:
           "A game night: the same broken-trust card is on screen while a woman argues all things heal over time — both people have faults, and you get the trust back by leaving the phone and the pocketbook lying around",
         tags: ["trust is broken"],
+        season: CHRISTMAS_2021,
       },
       {
         name: "trust-therapy",
         describes:
           "A game night: the same broken-trust card is on screen while a man agrees you can go to therapy and work on it, but says you will never get it back the way it once was",
         tags: ["trust is broken"],
+        season: CHRISTMAS_2021,
       },
       {
         name: "trust-forgive",
         describes:
           "A game night: the same broken-trust card is on screen while a woman argues that if you truly forgive someone and they have truly changed, you can trust them again and grow together",
         tags: ["trust is broken"],
+        season: CHRISTMAS_2021,
       },
       {
         name: "submissive-depends",
         describes:
           "A game night: the GAME NIGHT card 'Does being submissive to your partner make you weak?' is on screen while a man says it depends on the relationship — you can never tell a couple how to be with each other",
         tags: ["submissive"],
+        season: CHRISTMAS_2021,
       },
       {
         name: "submissive-vulnerability",
         describes:
           "A game night: the same submissive card is on screen while a man answers yes, it makes him weak, and says he wants her to see his vulnerability and that they are partners",
         tags: ["submissive"],
+        season: CHRISTMAS_2021,
       },
       {
         name: "school-african-studies",
         describes:
           "A game night: the GAME NIGHT card 'Is traditional schooling better than homeschooling?' is on screen while a woman argues for homeschooling — at home you can teach your kids African studies, which school does not show them",
         tags: ["homeschooling"],
+        season: CHRISTMAS_2021,
       },
       {
         name: "school-third-world",
         describes:
           "A game night: the same schooling card is on screen while a woman who homeschooled her own children to fifth grade calls the United States education system the equivalent of a third world country, and says homeschoolers do far better in college",
         tags: ["homeschooling"],
+        season: CHRISTMAS_2021,
       },
     ],
     schedule: [
@@ -1216,9 +1240,12 @@ export const BRANDS: Brand[] = [
           "finds a real problem somebody actually has, designs the fix by hand in a " +
           "notebook, and a coach builds it with them until it works — then they give " +
           "it to the person who needed it, and two coaches run every session. Word it " +
-          "differently every time so it never reads as a pasted block, and put it AFTER " +
-          "the story, never before — the kid earns the explanation. A post that names " +
-          "only a kid and a website is a post about a stranger.",
+          "differently every time so it never reads as a pasted block, and put it at " +
+          "the TOP: name SPARK Builders in the first line and say what it is by the " +
+          "second, before the kid's story. Instagram cuts a caption at about 125 " +
+          "characters, and on 2026-10-06 he read the set that kept the explanation " +
+          "for paragraph three as 'generic, it doesnt even say what spark is about'. " +
+          "A post that names only a kid and a website is a post about a stranger.",
         "NEVER write that the kids use AI, are on the computer, or use " +
           "technology as a building tool. It is not a hedge, it is not true, " +
           "and it is the sentence that loses a parent. In a SPARK room the " +
@@ -1226,9 +1253,10 @@ export const BRANDS: Brand[] = [
           "map, decide and sketch with pen, paper and people, and the coach " +
           "operates the tool. If the post has to name that arrangement, name " +
           "it that way round: the kid directs and judges, the coach types.",
-        "Lead with the kid and what they made for somebody, not with the " +
-          "program. A parent scrolling recognizes a seven-year-old who got " +
-          "sick of arguing about chores before they recognize a method.",
+        "After the opening line names the program, make the kid and what they " +
+          "made for somebody the body of the post, not the method. A parent " +
+          "scrolling recognizes a seven-year-old who got sick of arguing about " +
+          "chores before they recognize a method.",
         "Never name a price, a fee, a range or a word like free, and never " +
           "imply one. Nothing on the site names a number and a post must not " +
           "invent the first one.",

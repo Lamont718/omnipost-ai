@@ -70,6 +70,19 @@ export interface VideoClipMeta {
    * four characters or more: a two-letter tag matches half the sitemap.
    */
   tags?: string[];
+  /**
+   * The stretch of the year this clip may be picked in, as "MM-DD" bounds
+   * (inclusive; a window that wraps the new year is fine). Absent means any
+   * day.
+   *
+   * For footage that dates itself. Every YODM game-night clip was shot at a
+   * Christmas party — stockings and garland in shot — and on 2026-10-06 he
+   * read the October calendar as "still alot of the christmas themed event…
+   * mix it up". A clip with a season is simply not there to pick outside it.
+   * A caption already written against it keeps its pinned clip, so changing
+   * a window means rewriting the posts it already sits in.
+   */
+  season?: { from: string; to: string };
 }
 
 export interface LibraryVideo {
@@ -82,6 +95,16 @@ export interface LibraryVideo {
   /** From brands.ts, when the clip is declared there. */
   describes?: string;
   tags?: string[];
+  season?: { from: string; to: string };
+}
+
+/** True when a slot's date falls inside a clip's season, or it has none. */
+export function inSeason(video: LibraryVideo, slotId: string): boolean {
+  if (!video.season) return true;
+  const md = slotId.match(/:\d{4}-(\d{2}-\d{2}):/)?.[1];
+  if (!md) return true;
+  const { from, to } = video.season;
+  return from <= to ? md >= from && md <= to : md >= from || md <= to;
 }
 
 function hasBlob(): boolean {
@@ -129,6 +152,7 @@ export async function videosFor(brandSlug: string): Promise<LibraryVideo[]> {
           name,
           describes: meta?.describes,
           tags: meta?.tags,
+          season: meta?.season,
         };
       })
       .filter((v) => !!v.name);
@@ -274,6 +298,7 @@ export function pickVideoForSlot(
   /** The topic's URL, or its title when there is no page. */
   hint?: string,
 ): LibraryVideo | null {
+  videos = videos.filter((v) => inSeason(v, slotId));
   if (videos.length === 0) return null;
 
   const index = rotationIndex(slotId, videos.length);
