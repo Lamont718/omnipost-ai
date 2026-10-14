@@ -90,6 +90,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: `source returned ${upstream.status}` }, { status: 502 });
   }
 
+  // Refuse on the declared size before reading the body into memory; the check
+  // below still catches a source that lies about it or sends none.
+  if (Number(upstream.headers.get("content-length") ?? 0) > MAX_BYTES) {
+    return NextResponse.json({ error: "image is too large" }, { status: 413 });
+  }
+
   const buffer = Buffer.from(await upstream.arrayBuffer());
   if (buffer.byteLength > MAX_BYTES) {
     return NextResponse.json({ error: "image is too large" }, { status: 413 });

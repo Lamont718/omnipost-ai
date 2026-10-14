@@ -6,7 +6,8 @@ import { composePost } from "@/lib/compose";
 import {
   compactCaptions,
   priorCaptionsForTopic,
-  readCaptions,
+
+  readCaptionsStrict,
   recentOpenings,
   writeCaptions,
   CaptionMap,
@@ -140,7 +141,7 @@ export async function GET(request: Request) {
     // Read unconditionally now, not only when skipping: the writer is shown
     // what this brand has already said about the same topic, and a forced
     // reroll needs that just as much as a first pass does.
-    const already = await readCaptions();
+    const already = await readCaptionsStrict();
     let skipped = 0;
     if (!force) {
       const before = slots.length;

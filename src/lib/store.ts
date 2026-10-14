@@ -1,3 +1,4 @@
+import { listAll } from "./blob-list";
 import { GenerateResponse } from "./types";
 import type { Topic } from "./sources";
 import type { PinnedVideo } from "./video-library";
@@ -281,15 +282,36 @@ async function inChunks<T, R>(items: T[], size: number, fn: (item: T) => Promise
 export async function readCaptions(): Promise<CaptionMap> {
   if (!hasBlob()) return {};
   try {
-    const { list } = await import("@vercel/blob");
+    return await readCaptionsStrict();
+  } catch (err) {
+    console.error("readCaptions failed:", err);
+    return {};
+  }
+}
 
-    const [baseList, partList] = await Promise.all([
-      list({ prefix: BASE_KEY }),
-      list({ prefix: PART_PREFIX }),
-    ]);
+/**
+ * The same read, but a failure is an error rather than an empty map.
+ *
+ * `readCaptions` answers {} when anything goes wrong, which is right for a page
+ * that only displays, and was catastrophic for the two callers that act on the
+ * answer: compactCaptions wrote that {} back over captions.json, keeping only
+ * the week's new entries, and the Monday run took it to mean nothing was
+ * written and paid to regenerate reviewed slots. A just-written base that 404s
+ * for a minute (see fetchJson) was enough to trigger both.
+ */
+export async function readCaptionsStrict(): Promise<CaptionMap> {
+  if (!hasBlob()) return {};
+  {
+    const [baseBlobs, partBlobs] = await Promise.all([listAll(BASE_KEY), listAll(PART_PREFIX)]);
+    const partList = { blobs: partBlobs };
 
-    const baseHit = baseList.blobs.find((b) => b.pathname === BASE_KEY);
-    const base = baseHit ? ((await fetchJson<CaptionMap>(baseHit.url)) ?? {}) : {};
+    const baseHit = baseBlobs.find((b) => b.pathname === BASE_KEY);
+    let base: CaptionMap = {};
+    if (baseHit) {
+      const got = await fetchJson<CaptionMap>(baseHit.url);
+      if (!got) throw new Error(`${BASE_KEY} exists but could not be read; refusing to treat it as empty`);
+      base = got;
+    }
 
     const parts = await inChunks(partList.blobs, READ_CONCURRENCY, async (b) =>
       fetchJson<{ id: string } & StoredCaption>(b.url),
@@ -317,9 +339,6 @@ export async function readCaptions(): Promise<CaptionMap> {
       );
     }
     return merged;
-  } catch (err) {
-    console.error("readCaptions failed:", err);
-    return {};
   }
 }
 
@@ -373,13 +392,15 @@ export async function compactCaptions(entries: CaptionMap = {}): Promise<{
 }> {
   if (!hasBlob()) return { total: 0, added: 0, partsCleared: 0, partsKept: 0 };
 
-  const { put, del, list } = await import("@vercel/blob");
+  const { put, del } = await import("@vercel/blob");
 
   // Snapshot the parts BEFORE reading, so a part written during the read is
   // never a deletion candidate: it would not be in `merged` and so could be
   // dropped without ever having been folded in.
-  const before = await list({ prefix: PART_PREFIX });
-  const existing = await readCaptions();
+  const before = { blobs: await listAll(PART_PREFIX) };
+  // Strict: an unreadable base must stop the compaction, not become {} and be
+  // written back over every caption that was in it.
+  const existing = await readCaptionsStrict();
   const merged = { ...existing, ...entries };
 
   // Nothing new and nothing to tidy — rewriting the base here buys nothing and

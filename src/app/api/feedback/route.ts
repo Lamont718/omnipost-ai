@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clearFeedback, readFeedback, setFeedback, Verdict } from "@/lib/feedback";
+import { isSlotId } from "@/lib/schedule";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +41,9 @@ export async function POST(request: NextRequest) {
   const id = typeof body.id === "string" ? body.id.trim() : "";
   if (!id) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+  if (!isSlotId(id)) {
+    return NextResponse.json({ error: "not a slot id" }, { status: 400 });
   }
 
   // An explicit null clears it — pressing the same thumb twice should undo,

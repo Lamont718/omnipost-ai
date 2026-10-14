@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { todayInZone } from "@/lib/daily";
 import { scheduledPostsInRange } from "@/lib/schedule";
 import { readCaptions, writeCaptions, CaptionMap } from "@/lib/store";
 
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
   }
 
   const params = new URL(request.url).searchParams;
-  const monthParam = params.get("month") ?? new Date().toISOString().slice(0, 7);
+  const monthParam = params.get("month") ?? todayInZone().slice(0, 7);
   const dry = params.get("dry") === "1";
 
   const m = monthParam.match(/^(\d{4})-(\d{2})$/);

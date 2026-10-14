@@ -5,7 +5,7 @@ import { videosFor } from "../video-library";
 import { resolveArtwork, shareImagesForTopics } from "../post-artwork";
 import { scheduledPostsInRange, withPinnedTopics } from "../schedule";
 import { readCaptions } from "../store";
-import { alreadyPublished, recordPublished } from "../published";
+import { alreadyPublished, claimPublish, recordPublished, releasePublish } from "../published";
 import { facebookAccount, instagramAccount, isPublishable, xAccount } from "../accounts";
 import { publishToFacebook, publishToInstagram } from "./meta";
 import { publishToX } from "./x";
@@ -175,6 +175,15 @@ export async function publishSlot(id: string, origin: string): Promise<PublishOu
     };
   }
 
+  if (!(await claimPublish(id))) {
+    return {
+      id,
+      published: false,
+      duplicate: true,
+      error: "this post is already being published (or already went out) — refresh before trying again",
+    };
+  }
+
   try {
     let remoteId: string;
     let permalink: string | undefined;
@@ -228,6 +237,7 @@ export async function publishSlot(id: string, origin: string): Promise<PublishOu
 
     return { id, published: true, remoteId, permalink, publishedAt };
   } catch (error) {
+    await releasePublish(id);
     return {
       id,
       published: false,

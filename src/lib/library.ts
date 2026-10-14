@@ -1,3 +1,4 @@
+import { listAll } from "./blob-list";
 import { brandBySlug } from "./brands";
 
 /**
@@ -70,8 +71,7 @@ export async function libraryFor(brandSlug: string): Promise<LibraryImage[]> {
   let uploaded: LibraryImage[] = [];
   if (hasBlob()) {
     try {
-      const { list } = await import("@vercel/blob");
-      const { blobs } = await list({ prefix: `${PREFIX}${brandSlug}/` });
+      const blobs = await listAll(`${PREFIX}${brandSlug}/`);
       uploaded = blobs
         // Clips and their poster frames live one level down, under `video/`,
         // and a listing by prefix returns them too. Without this the posters

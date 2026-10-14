@@ -1,5 +1,5 @@
-import { Platform, PostSlot, Weekday } from "./types";
-import { activeBrands, Brand } from "./brands";
+import { Platform, PLATFORMS, PostSlot, Weekday } from "./types";
+import { activeBrands, Brand, brandBySlug } from "./brands";
 import { topicsForBrand, Topic, weekIndex } from "./sources";
 import type { CaptionMap } from "./store";
 
@@ -49,6 +49,24 @@ function iso(date: Date): string {
 /** A slot's stable id — same slot on the same date always resolves the same. */
 export function slotId(brandSlug: string, date: string, slot: PostSlot): string {
   return `${brandSlug}:${date}:${slot.time}:${slot.platform}`;
+}
+
+const SLOT_ID = /^([a-z0-9-]+):(\d{4}-\d{2}-\d{2}):(\d{2}:\d{2}):([a-z]+)$/;
+
+/**
+ * Whether a string is shaped like a real slot id for a brand this app knows.
+ *
+ * /api/posted and /api/feedback are deliberately open so he can tick from his
+ * phone. Without this they would store any string a stranger sent — thousands
+ * of junk records that cost Blob operations and push real ticks out of view.
+ */
+export function isSlotId(id: string): boolean {
+  const m = SLOT_ID.exec(id);
+  if (!m) return false;
+  return (
+    !!brandBySlug(m[1]) &&
+    (PLATFORMS as readonly string[]).includes(m[4])
+  );
 }
 
 /**

@@ -1,3 +1,4 @@
+import { listAll } from "./blob-list";
 /**
  * Whether the emails this app sends actually go out.
  *
@@ -97,8 +98,7 @@ export async function recordSend(record: SendRecord): Promise<boolean> {
 export async function readSends(): Promise<SendRecord[]> {
   if (!hasBlob()) return [];
   try {
-    const { list } = await import("@vercel/blob");
-    const { blobs } = await list({ prefix: PREFIX });
+    const blobs = await listAll(PREFIX);
     const fetched = await Promise.all(
       blobs.map(async (b) => {
         try {

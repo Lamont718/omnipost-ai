@@ -1,3 +1,4 @@
+import { listAll } from "./blob-list";
 import { Platform } from "./types";
 
 /**
@@ -47,8 +48,7 @@ function recordPath(id: string): string {
 export async function readPublished(): Promise<Record<string, PublishRecord>> {
   if (!hasBlob()) return {};
   try {
-    const { list } = await import("@vercel/blob");
-    const { blobs } = await list({ prefix: PREFIX });
+    const blobs = await listAll(PREFIX);
 
     const out: Record<string, PublishRecord> = {};
     const fetched = await Promise.all(
@@ -109,5 +109,43 @@ export async function recordPublished(record: PublishRecord): Promise<boolean> {
   } catch (err) {
     console.error(`recordPublished failed for ${record.id}:`, err);
     return false;
+  }
+}
+
+const LOCK_PREFIX = "publish-lock/";
+
+/**
+ * Take the one-time right to publish this slot.
+ *
+ * `alreadyPublished` then `recordPublished` is a check and a write with a
+ * network call between them, so two fast taps on Post both passed the check and
+ * both went out. A create that refuses to overwrite is atomic on Blob's side:
+ * exactly one caller gets `true`. Any error also answers `false` — "could not
+ * tell" must mean "don't post", not "go ahead".
+ */
+export async function claimPublish(id: string): Promise<boolean> {
+  if (!hasBlob()) return true;
+  try {
+    const { put } = await import("@vercel/blob");
+    await put(`${LOCK_PREFIX}${encodeURIComponent(id)}.json`, JSON.stringify({ id, at: new Date().toISOString() }), {
+      access: "public",
+      contentType: "application/json",
+      addRandomSuffix: false,
+      allowOverwrite: false,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Give the claim back after a publish that did NOT go out, so it can be retried. */
+export async function releasePublish(id: string): Promise<void> {
+  if (!hasBlob()) return;
+  try {
+    const { del } = await import("@vercel/blob");
+    await del(`${LOCK_PREFIX}${encodeURIComponent(id)}.json`);
+  } catch (err) {
+    console.error(`releasePublish failed for ${id}:`, err);
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { todayInZone } from "@/lib/daily";
 import { scheduledPostsInRange, withPinnedTopics } from "@/lib/schedule";
 import { readCaptions } from "@/lib/store";
 import { brandBySlug } from "@/lib/brands";
@@ -42,12 +43,12 @@ function monthRange(month: string): { start: Date; end: Date } | null {
 
 export async function GET(request: NextRequest) {
   const params = new URL(request.url).searchParams;
-  const month = params.get("month") ?? new Date().toISOString().slice(0, 7);
+  const month = params.get("month") ?? todayInZone().slice(0, 7);
   const brandSlug = params.get("brand");
   const draft = params.get("draft") === "1";
   const brandName = params.get("brandName") ?? undefined;
   /** Skip anything before this date — no point scheduling posts into the past. */
-  const from = params.get("from") ?? new Date().toISOString().slice(0, 10);
+  const from = params.get("from") ?? todayInZone();
 
   const range = monthRange(month);
   if (!range) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { markPosted, readPosted, unmarkPosted } from "@/lib/posted";
+import { isSlotId } from "@/lib/schedule";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +46,9 @@ export async function POST(request: NextRequest) {
   // exact bug this route was built to fix.
   if (body.marks && typeof body.marks === "object") {
     const marks = body.marks as Record<string, unknown>;
-    const ids = Object.keys(marks).slice(0, 2000);
+    // Only real slot ids, and a cap a real browser never reaches: an open
+    // route that stored anything it was sent was a free junk-writer.
+    const ids = Object.keys(marks).filter(isSlotId).slice(0, 300);
     const existing = await readPosted();
     const missing = ids.filter((id) => !existing[id]);
 
@@ -68,6 +71,9 @@ export async function POST(request: NextRequest) {
   const id = typeof body.id === "string" ? body.id.trim() : "";
   if (!id) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+  if (!isSlotId(id)) {
+    return NextResponse.json({ error: "not a slot id" }, { status: 400 });
   }
 
   const wantsPosted = body.posted !== false;

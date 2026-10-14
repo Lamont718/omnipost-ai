@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { hourInZone, planForDay, renderDailyHtml, sendDaily, todayInZone } from "@/lib/daily";
-import { recordSend } from "@/lib/sent-log";
+import { readSends, recordSend } from "@/lib/sent-log";
 import { missedPosts } from "@/lib/backlog";
 
 export const runtime = "nodejs";
@@ -72,7 +72,16 @@ export async function GET(request: Request) {
     // Counted here rather than inside planForDay: lib/backlog needs the New
     // York clock from lib/daily, and having daily import backlog back would put
     // a cycle between two modules the cron loads on every run.
-    const missedCount = (await missedPosts(date)).length;
+    //
+    // Optional: it scans every day since the first caption, and as that history
+    // grows a timeout or a bad topic page here must not cost him the morning's
+    // email. Zero just hides the "missed" line for a day.
+    let missedCount = 0;
+    try {
+      missedCount = (await missedPosts(date)).length;
+    } catch (err) {
+      console.error("daily-nudge: missedPosts failed, sending without it:", err);
+    }
 
     // The origin the links and pictures resolve against, taken from the request
     // so a preview deployment links to itself rather than to production.
@@ -107,6 +116,16 @@ export async function GET(request: Request) {
         reason,
         wouldHaveSent: { date, due: plan.due.length, alreadyDone: plan.doneCount },
       });
+    }
+
+    // One email per morning. Vercel can deliver a cron more than once, and a
+    // retried invocation must not land a second copy in his inbox. `force`
+    // still sends, for a deliberate resend.
+    if (!force) {
+      const sends = await readSends();
+      if (sends.some((r) => r.kind === "daily" && r.date === date && r.sent)) {
+        return NextResponse.json({ skipped: true, reason: `already sent for ${date}` });
+      }
     }
 
     const result = await sendDaily(to, plan, origin, missedCount);

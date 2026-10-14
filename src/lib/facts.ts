@@ -1,3 +1,4 @@
+import { listAll } from "./blob-list";
 /**
  * Things that are true about a brand, typed by the person who knows them.
  *
@@ -42,8 +43,7 @@ function factsPath(slug: string): string {
 export async function readAllFacts(): Promise<Record<string, BrandFacts>> {
   if (!hasBlob()) return {};
   try {
-    const { list } = await import("@vercel/blob");
-    const { blobs } = await list({ prefix: PREFIX });
+    const blobs = await listAll(PREFIX);
 
     const out: Record<string, BrandFacts> = {};
     const fetched = await Promise.all(

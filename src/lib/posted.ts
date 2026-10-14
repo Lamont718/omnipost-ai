@@ -1,3 +1,4 @@
+import { listAll } from "./blob-list";
 /**
  * "I posted this myself" — the manual tick, kept on the server.
  *
@@ -46,8 +47,7 @@ function recordPath(id: string): string {
 export async function readPosted(): Promise<Record<string, PostedRecord>> {
   if (!hasBlob()) return {};
   try {
-    const { list } = await import("@vercel/blob");
-    const { blobs } = await list({ prefix: PREFIX });
+    const blobs = await listAll(PREFIX);
 
     const out: Record<string, PostedRecord> = {};
     const fetched = await Promise.all(

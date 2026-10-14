@@ -33,13 +33,25 @@ export function isAllowedHost(hostname: string): boolean {
 }
 
 /**
- * Vercel Blob's public read host. Our own uploaded image library lives here.
+ * Our own Vercel Blob store, where the uploaded image library lives.
  *
- * Blob buckets are per-store subdomains of one Vercel-controlled domain that
- * serves nothing but public objects, so allowing the suffix does not open a
- * path to anything internal — which is the thing the allowlist exists to stop.
+ * This used to allow the whole `.public.blob.vercel-storage.com` suffix. That
+ * opens no path to anything internal, but it let anyone upload a file to their
+ * OWN store and have /api/image-jpeg decode it with sharp on our function —
+ * the image decoder being exactly where sharp's high-severity advisories live.
+ * So: only our store. The id is also read from the write token, so a store
+ * change follows the token instead of silently 403ing every library picture.
  */
 const BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
+const OWN_BLOB_STORE = "gjrfhlr0lakjg4hl";
+
+function ownBlobHosts(): Set<string> {
+  const hosts = new Set([`${OWN_BLOB_STORE}${BLOB_HOST_SUFFIX}`]);
+  // vercel_blob_rw_<storeId>_<secret>
+  const id = process.env.BLOB_READ_WRITE_TOKEN?.split("_")[3];
+  if (id) hosts.add(`${id.toLowerCase()}${BLOB_HOST_SUFFIX}`);
+  return hosts;
+}
 
 /**
  * Hosts that may be fetched when the URL is a post's ARTWORK rather than a
@@ -57,7 +69,7 @@ const BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
  */
 export function isAllowedImageHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
-  if (host.endsWith(BLOB_HOST_SUFFIX)) return true;
+  if (ownBlobHosts().has(host)) return true;
   if (allowedHosts().has(host)) return true;
 
   for (const brand of BRANDS) {

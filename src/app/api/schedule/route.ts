@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { todayInZone } from "@/lib/daily";
 import { buildSlotViews } from "@/lib/schedule-view";
 
 export const runtime = "nodejs";
@@ -25,7 +26,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const monthParam =
     new URL(request.url).searchParams.get("month") ??
-    new Date().toISOString().slice(0, 7);
+    todayInZone().slice(0, 7);
 
   const m = monthParam.match(/^(\d{4})-(\d{2})$/);
   if (!m) {

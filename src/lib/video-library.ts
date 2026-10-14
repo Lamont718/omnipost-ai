@@ -1,3 +1,4 @@
+import { listAll } from "./blob-list";
 import { brandBySlug } from "./brands";
 import type { Platform } from "./types";
 
@@ -126,8 +127,7 @@ export async function videosFor(brandSlug: string): Promise<LibraryVideo[]> {
 
   let clips: LibraryVideo[] = [];
   try {
-    const { list } = await import("@vercel/blob");
-    const { blobs } = await list({ prefix: `${PREFIX}${brandSlug}/${VIDEO_DIR}` });
+    const blobs = await listAll(`${PREFIX}${brandSlug}/${VIDEO_DIR}`);
 
     // Posters are addressed by name, not by position — a listing that returns
     // them in another order must still pair them correctly.

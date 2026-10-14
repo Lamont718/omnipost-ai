@@ -1,3 +1,4 @@
+import { listAll } from "./blob-list";
 /**
  * Did the post do anything?
  *
@@ -40,8 +41,7 @@ function recordPath(id: string): string {
 export async function readFeedback(): Promise<Record<string, FeedbackRecord>> {
   if (!hasBlob()) return {};
   try {
-    const { list } = await import("@vercel/blob");
-    const { blobs } = await list({ prefix: PREFIX });
+    const blobs = await listAll(PREFIX);
 
     const out: Record<string, FeedbackRecord> = {};
     const fetched = await Promise.all(
